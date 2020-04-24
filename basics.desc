@@ -1,0 +1,5 @@
+describe basic operations
+  - create a new ticket
+  - assign a ticket
+  - create a new user
+  - assign a ticket to a user
