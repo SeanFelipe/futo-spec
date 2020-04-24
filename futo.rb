@@ -1,7 +1,7 @@
 require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
 
-MAP_FILE = 'map/futo_map.rb'
+MAP_FILE = 'chizu/futo_map.rb'
 
 class MapEntry
   attr_accessor :title, :commands
@@ -41,14 +41,33 @@ class FutoSpec
     end
   end
 
+  def single_quoted_line?(line)
+    single = false
+    line.chars.each do |char|
+      if char == '"'
+        break
+      end
+      if char == "'"
+        single = true
+        break
+      end
+    end
+    return single
+  end
+
   def load_map
     File.open(MAP_FILE) do |file|
       lines = file.readlines
       title = String.new
       commands = Array.new
       lines.each do |ll|
+        using_single_quotes = single_quoted_line?(line)
         if ll.start_with? 'On'
-          title = ll.split('"')[1].chomp
+          if using_single_quotes
+            title = ll.split("'")[1].chomp
+          else
+            title = ll.split('"')[1].chomp
+          end
         elsif ll.start_with? 'end'
           @map << MapEntry.new(title, commands)
           title = String.new
