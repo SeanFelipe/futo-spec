@@ -110,7 +110,7 @@ class FutoSpec
       init_browser
       puts 'browser loaded, beginning test...'
     end
-    exec_steps
+    exec_cases
   end
 
   def match_step_with_command(st)
@@ -123,8 +123,9 @@ class FutoSpec
     end
   end
 
-  def exec_steps
-    @steps.each do |st|
+  def exec_cases
+    @cases.each do |test_case|
+      test_case.steps.each |st|
       match_step_with_command(st)
     end
   end
