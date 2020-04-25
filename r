@@ -1,2 +1,2 @@
 title 'run-futo'
-ruby futo.rb
+ruby engine/futo.rb

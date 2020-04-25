@@ -1,4 +1,4 @@
-On "create a new ticket" do
+On 'create a new ticket' do
   puts "foo"
   puts "bar"
   breakpoint
