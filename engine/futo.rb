@@ -1,16 +1,25 @@
 require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
 
-MAP_FILE = 'chizu/futo_map.rb'
+CHIZU_FILE = 'chizu/futo_map.rb'
 PLATFORM = :cli
 #PLATFORM = :appium
 #PLATFORM = :selenium
+
+class FutoBullet
+  attr_accessor :title, :commands
+  def initialize(t, cmds)
+    @title = t
+    @commands = cmds
+  end
+end
 
 class FutoCase
   attr_accessor :description, :bullet_points
   def initialize(t, b_arr)
     @description = t
-    @bullet_points = b_arr
+    @bullets = b_arr
+    @commands = Array.new
   end
 end
 
@@ -32,6 +41,8 @@ class FutoSpec
     @cases = Array.new
     @chizu = Array.new
     load_test_cases(desc_file)
+    load_chizu
+    match_cases_to_chizu
   end
 
   def begin_new_case
@@ -39,8 +50,8 @@ class FutoSpec
     @new_case_bullets = Array.new
   end
 
-  def add_case_to_spec(description, bullets)
-    @cases << FutoCase.new(description, new_case_bullets)
+  def add_case_to_spec
+    @cases << FutoCase.new(@new_case_description, @new_case_bullets)
   end
 
   def load_test_cases(fn)
@@ -58,10 +69,12 @@ class FutoSpec
           @new_case_bullets << ll.split('-').last.chomp.lstrip
         else
           # new case, description
-          @new_case_description = ll.lstrip
+          @new_case_description = ll.chomp.lstrip
         end
       end
     end
+
+    add_case_to_spec
   end
 
   def single_quoted_line?(line)
@@ -78,8 +91,8 @@ class FutoSpec
     return single
   end
 
-  def load_map
-    File.open(MAP_FILE) do |file|
+  def load_chizu
+    File.open(CHIZU_FILE) do |file|
       lines = file.readlines
       title = ''
       commands = Array.new
@@ -104,13 +117,15 @@ class FutoSpec
     end
   end
 
-  def run
-    load_map
-    if PLATFORM == :selenium
-      init_browser
-      puts 'browser loaded, beginning test...'
+  def match_cases_to_chizu
+    breakpoint
+    @cases.each do |test_case|
+      @chizu.each do |chizu_entry|
+        if test_case.title == chizu_entry.title
+          test_case.commands = chizu_entry.commands
+        end
+      end
     end
-    exec_cases
   end
 
   def match_step_with_command(st)
@@ -121,6 +136,14 @@ class FutoSpec
         end
       end
     end
+  end
+
+  def run
+    if PLATFORM == :selenium
+      init_browser
+      puts 'browser loaded, beginning test...'
+    end
+    exec_cases
   end
 
   def exec_cases
