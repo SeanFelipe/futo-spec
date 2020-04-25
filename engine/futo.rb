@@ -1,5 +1,6 @@
 require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
+require 'paint/pa'
 
 CHIZU_FILE = 'chizu/futo_map.rb'
 PLATFORM = :cli
@@ -7,26 +8,26 @@ PLATFORM = :cli
 #PLATFORM = :selenium
 
 class FutoBullet
-  attr_accessor :title, :commands
-  def initialize(t, cmds)
-    @title = t
+  attr_accessor :heading, :commands
+  def initialize(h, cmds)
+    @heading = h
     @commands = cmds
   end
 end
 
 class FutoCase
-  attr_accessor :description, :bullet_points
-  def initialize(t, b_arr)
-    @description = t
+  attr_accessor :heading, :bullets, :commands
+  def initialize(h, b_arr)
+    @heading = h
     @bullets = b_arr
     @commands = Array.new
   end
 end
 
 class ChizuEntry
-  attr_accessor :title, :commands
-  def initialize(t, c_arr)
-    @title = t
+  attr_accessor :heading, :commands
+  def initialize(h, c_arr)
+    @heading = h
     @commands = c_arr
   end
 end
@@ -36,8 +37,6 @@ class FutoSpec
 
   #def initialize(desc, steps)
   def initialize(desc_file)
-    #@description = desc
-    #@steps = steps
     @cases = Array.new
     @chizu = Array.new
     load_test_cases(desc_file)
@@ -46,12 +45,12 @@ class FutoSpec
   end
 
   def begin_new_case
-    @new_case_description = ''
+    @new_case_heading = ''
     @new_case_bullets = Array.new
   end
 
   def add_case_to_spec
-    @cases << FutoCase.new(@new_case_description, @new_case_bullets)
+    @cases << FutoCase.new(@new_case_heading, @new_case_bullets)
   end
 
   def load_test_cases(fn)
@@ -65,11 +64,9 @@ class FutoSpec
           add_case_to_spec
           begin_new_case
         elsif ll.lstrip.start_with? '-'
-          # bullet point for case in progress
           @new_case_bullets << ll.split('-').last.chomp.lstrip
         else
-          # new case, description
-          @new_case_description = ll.chomp.lstrip
+          @new_case_heading = ll.chomp.lstrip
         end
       end
     end
@@ -94,19 +91,19 @@ class FutoSpec
   def load_chizu
     File.open(CHIZU_FILE) do |file|
       lines = file.readlines
-      title = ''
+      heading = ''
       commands = Array.new
       lines.each do |ll|
         using_single_quotes = single_quoted_line?(ll)
         if ll.start_with? 'On'
           if using_single_quotes
-            title = ll.split("'")[1].chomp
+            heading = ll.split("'")[1].chomp
           else
-            title = ll.split('"')[1].chomp
+            heading = ll.split('"')[1].chomp
           end
         elsif ll.start_with? 'end'
-          @chizu << ChizuEntry.new(title, commands)
-          title = ''
+          @chizu << ChizuEntry.new(heading, commands)
+          heading = ''
           commands = Array.new
         elsif ll == "\n"
           next
@@ -118,21 +115,10 @@ class FutoSpec
   end
 
   def match_cases_to_chizu
-    breakpoint
     @cases.each do |test_case|
       @chizu.each do |chizu_entry|
-        if test_case.title == chizu_entry.title
+        if test_case.heading == chizu_entry.heading
           test_case.commands = chizu_entry.commands
-        end
-      end
-    end
-  end
-
-  def match_step_with_command(st)
-    @chizu.each do |entry|
-      if entry.title == st
-        entry.commands.each do |cmd|
-          eval cmd
         end
       end
     end
@@ -146,10 +132,35 @@ class FutoSpec
     exec_cases
   end
 
+  def missing_commands(test_case)
+    puts
+    pa "Missing chizu for test case:", :green
+    puts
+    pa  test_case.heading, :cyan
+    test_case.bullets.each do |bul|
+      pa "- #{bul}", :cyan
+    end
+    puts; puts
+    pa "Sample chizu entries:", :green
+    puts
+    test_case.bullets.each do |bul|
+      pa "On '#{bul}' do", :yellow
+      pa '  # TODO', :yellow
+      pa 'end', :yellow
+      puts
+    end
+    puts
+  end
+
   def exec_cases
     @cases.each do |test_case|
-      test_case.steps.each |st|
-      match_step_with_command(st)
+      unless test_case.commands.length == 0
+        test_case.commands.each do |cmd|
+          eval cmd
+        end
+      else
+        missing_commands(test_case)
+      end
     end
   end
 
