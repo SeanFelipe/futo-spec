@@ -2,8 +2,19 @@ require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
 
 MAP_FILE = 'chizu/futo_map.rb'
+PLATFORM = :cli
+#PLATFORM = :appium
+#PLATFORM = :selenium
 
-class MapEntry
+class FutoCase
+  attr_accessor :description, :bullet_points
+  def initialize(t, b_arr)
+    @description = t
+    @bullet_points = b_arr
+  end
+end
+
+class ChizuEntry
   attr_accessor :title, :commands
   def initialize(t, c_arr)
     @title = t
@@ -12,32 +23,44 @@ class MapEntry
 end
 
 class FutoSpec
-  attr_accessor :description, :steps, :map
+  attr_accessor :cases, :chizu
 
   #def initialize(desc, steps)
   def initialize(desc_file)
     #@description = desc
     #@steps = steps
-    @steps = Array.new
-    @map = Array.new
-    load_steps(desc_file)
+    @cases = Array.new
+    @chizu = Array.new
+    load_test_cases(desc_file)
   end
 
-  def load_steps(fn)
+  def begin_new_case
+    @new_case_description = ''
+    @new_case_bullets = Array.new
+  end
+
+  def add_case_to_spec(description, bullets)
+    @cases << FutoCase.new(description, new_case_bullets)
+  end
+
+  def load_test_cases(fn)
+    begin_new_case
+
     File.open(fn) do |file|
       lines = file.readlines
-      #desc = nil
-      #steps = Array.new
+
       lines.each do |ll|
-        if ll.start_with? 'describe'
-          @desc = ll.split('describe ').last.chomp.lstrip
+        if ll == "\n"
+          add_case_to_spec
+          begin_new_case
         elsif ll.lstrip.start_with? '-'
-          @steps << ll.split('-').last.chomp.lstrip
+          # bullet point for case in progress
+          @new_case_bullets << ll.split('-').last.chomp.lstrip
+        else
+          # new case, description
+          @new_case_description = ll.lstrip
         end
       end
-
-      #new_spec = FutoSpec.new desc, steps
-      #new_spec.run
     end
   end
 
@@ -58,10 +81,10 @@ class FutoSpec
   def load_map
     File.open(MAP_FILE) do |file|
       lines = file.readlines
-      title = String.new
+      title = ''
       commands = Array.new
       lines.each do |ll|
-        using_single_quotes = single_quoted_line?(line)
+        using_single_quotes = single_quoted_line?(ll)
         if ll.start_with? 'On'
           if using_single_quotes
             title = ll.split("'")[1].chomp
@@ -69,8 +92,8 @@ class FutoSpec
             title = ll.split('"')[1].chomp
           end
         elsif ll.start_with? 'end'
-          @map << MapEntry.new(title, commands)
-          title = String.new
+          @chizu << ChizuEntry.new(title, commands)
+          title = ''
           commands = Array.new
         elsif ll == "\n"
           next
@@ -83,13 +106,15 @@ class FutoSpec
 
   def run
     load_map
-    init_browser
-    puts 'browser loaded, beginning test...'
+    if PLATFORM == :selenium
+      init_browser
+      puts 'browser loaded, beginning test...'
+    end
     exec_steps
   end
 
   def match_step_with_command(st)
-    @map.each do |entry|
+    @chizu.each do |entry|
       if entry.title == st
         entry.commands.each do |cmd|
           eval cmd
@@ -112,6 +137,5 @@ class FutoSpec
   end
 end
 
-
-fs = FutoSpec.new('basics.desc')
+fs = FutoSpec.new('basics.futo')
 fs.run
