@@ -134,17 +134,17 @@ class FutoSpec
 
   def missing_commands(test_case)
     puts
-    pa "Missing chizu for test case:", :green
+    pa "Missing chizu for spec:", :gray
     puts
     pa  test_case.heading, :cyan
     test_case.bullets.each do |bul|
       pa "- #{bul}", :cyan
     end
     puts; puts
-    pa "Sample chizu entries:", :green
+    pa "Sample chizu entries:", :gray
     puts
     test_case.bullets.each do |bul|
-      pa "On '#{bul}' do", :yellow
+      pa "Chi '#{bul}' do", :yellow
       pa '  # TODO', :yellow
       pa 'end', :yellow
       puts
