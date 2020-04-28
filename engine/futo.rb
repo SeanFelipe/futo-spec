@@ -2,7 +2,7 @@ require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
 require 'paint/pa'
 
-CHIZU_FILE = 'chizu/futo_map.rb'
+CHIZU_FILE = './chizu/futo_map.rb'
 PLATFORM = :cli
 #PLATFORM = :appium
 #PLATFORM = :selenium
@@ -144,7 +144,7 @@ class FutoSpec
     pa "Sample chizu entries:", :gray
     puts
     test_case.bullets.each do |bul|
-      pa "Chi '#{bul}' do", :yellow
+      pa "On '#{bul}' do", :yellow
       pa '  # TODO', :yellow
       pa 'end', :yellow
       puts
@@ -172,5 +172,5 @@ class FutoSpec
   end
 end
 
-fs = FutoSpec.new('basics.futo')
+fs = FutoSpec.new(ARGV.first)
 fs.run
