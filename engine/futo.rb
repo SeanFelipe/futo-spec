@@ -32,12 +32,13 @@ class ChizuEntry
 end
 
 class FutoSpec
-  attr_accessor :cases, :chizu
+  attr_accessor :cases, :chizu, :unmatched
 
   #def initialize(desc, steps)
   def initialize(desc_file)
     @cases = Array.new
     @chizu = Array.new
+    @unmatched = Array.new
     load_test_cases(desc_file)
     load_chizu
     match_cases_to_chizu
@@ -132,21 +133,21 @@ class FutoSpec
       puts 'browser loaded, beginning test...'
     end
     exec_cases
+    if @unmatched.length > 0
+      output_unmatched_commands
+    end
   end
 
-  def missing_commands(test_case, bullet)
-    puts
-    pa "Missing chizu for spec:", :gray
-    puts
-    pa  test_case.description, :cyan
-    pa "- #{bullet.label}", :cyan
+  def output_unmatched_commands
     puts; puts
-    pa "Sample chizu entry:", :gray
+    pa "Missing chizu entries:", :cyan
     puts
-    pa "On '#{bullet.label}' do", :yellow
-    pa '  # TODO', :yellow
-    pa 'end', :yellow
-    puts
+    @unmatched.each do |un|
+      pa "On '#{un.label}' do", :yellow
+      pa '  # TODO', :yellow
+      pa 'end', :yellow
+      puts
+    end
     puts
   end
 
@@ -158,7 +159,7 @@ class FutoSpec
             eval cmd
           end
         else
-          missing_commands(test_case, bullet)
+          @unmatched << bullet
         end
       end
     end
