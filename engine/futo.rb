@@ -8,27 +8,26 @@ PLATFORM = :cli
 #PLATFORM = :selenium
 
 class FutoBullet
-  attr_accessor :heading, :commands
-  def initialize(h, cmds)
-    @heading = h
-    @commands = cmds
+  attr_accessor :label, :associated_commands
+  def initialize(h)
+    @label = h
+    @associated_commands = Array.new
   end
 end
 
 class FutoCase
-  attr_accessor :heading, :bullets, :commands
+  attr_accessor :description, :bullet_points
   def initialize(h, b_arr)
-    @heading = h
-    @bullets = b_arr
-    @commands = Array.new
+    @description = h
+    @bullet_points = b_arr
   end
 end
 
 class ChizuEntry
-  attr_accessor :heading, :commands
+  attr_accessor :kkey, :associated_commands
   def initialize(h, c_arr)
-    @heading = h
-    @commands = c_arr
+    @kkey = h
+    @associated_commands = c_arr
   end
 end
 
@@ -45,12 +44,12 @@ class FutoSpec
   end
 
   def begin_new_case
-    @new_case_heading = ''
+    @new_case_label = ''
     @new_case_bullets = Array.new
   end
 
   def add_case_to_spec
-    @cases << FutoCase.new(@new_case_heading, @new_case_bullets)
+    @cases << FutoCase.new(@new_case_label, @new_case_bullets)
   end
 
   def load_test_cases(fn)
@@ -64,9 +63,10 @@ class FutoSpec
           add_case_to_spec
           begin_new_case
         elsif ll.lstrip.start_with? '-'
-          @new_case_bullets << ll.split('-').last.chomp.lstrip
+          label = ll.split('-').last.chomp.lstrip
+          @new_case_bullets << FutoBullet.new(label)
         else
-          @new_case_heading = ll.chomp.lstrip
+          @new_case_label = ll.chomp.lstrip
         end
       end
     end
@@ -91,19 +91,19 @@ class FutoSpec
   def load_chizu
     File.open(CHIZU_FILE) do |file|
       lines = file.readlines
-      heading = ''
+      kkey = ''
       commands = Array.new
       lines.each do |ll|
         using_single_quotes = single_quoted_line?(ll)
         if ll.start_with? 'On'
           if using_single_quotes
-            heading = ll.split("'")[1].chomp
+            kkey = ll.split("'")[1].chomp
           else
-            heading = ll.split('"')[1].chomp
+            kkey = ll.split('"')[1].chomp
           end
         elsif ll.start_with? 'end'
-          @chizu << ChizuEntry.new(heading, commands)
-          heading = ''
+          @chizu << ChizuEntry.new(kkey, commands)
+          kkey = ''
           commands = Array.new
         elsif ll == "\n"
           next
@@ -116,9 +116,11 @@ class FutoSpec
 
   def match_cases_to_chizu
     @cases.each do |test_case|
-      @chizu.each do |chizu_entry|
-        if test_case.heading == chizu_entry.heading
-          test_case.commands = chizu_entry.commands
+      test_case.bullet_points.each do |bullet|
+        @chizu.each do |chizu|
+          if bullet == chizu.kkey
+            test_case.associated_commands = chizu.associated_commands
+          end
         end
       end
     end
@@ -132,34 +134,32 @@ class FutoSpec
     exec_cases
   end
 
-  def missing_commands(test_case)
+  def missing_commands(test_case, bullet)
     puts
     pa "Missing chizu for spec:", :gray
     puts
-    pa  test_case.heading, :cyan
-    test_case.bullets.each do |bul|
-      pa "- #{bul}", :cyan
-    end
+    pa  test_case.description, :cyan
+    pa "- #{bullet.label}", :cyan
     puts; puts
-    pa "Sample chizu entries:", :gray
+    pa "Sample chizu entry:", :gray
     puts
-    test_case.bullets.each do |bul|
-      pa "On '#{bul}' do", :yellow
-      pa '  # TODO', :yellow
-      pa 'end', :yellow
-      puts
-    end
+    pa "On '#{bullet.label}' do", :yellow
+    pa '  # TODO', :yellow
+    pa 'end', :yellow
+    puts
     puts
   end
 
   def exec_cases
     @cases.each do |test_case|
-      unless test_case.commands.length == 0
-        test_case.commands.each do |cmd|
-          eval cmd
+      test_case.bullet_points.each do |bullet|
+        unless bullet.associated_commands.length == 0
+          bullet.associated_commands.each do |cmd|
+            eval cmd
+          end
+        else
+          missing_commands(test_case, bullet)
         end
-      else
-        missing_commands(test_case)
       end
     end
   end
