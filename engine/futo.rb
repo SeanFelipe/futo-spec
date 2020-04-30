@@ -3,9 +3,9 @@ require 'selenium-webdriver'
 require 'paint/pa'
 
 CHIZU_FILE = './chizu/futo_map.rb'
-PLATFORM = :cli
+#PLATFORM = :cli
 #PLATFORM = :appium
-#PLATFORM = :selenium
+PLATFORM = :selenium
 
 class FutoBullet
   attr_accessor :label, :associated_commands
@@ -119,8 +119,8 @@ class FutoSpec
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         @chizu.each do |chizu|
-          if bullet == chizu.kkey
-            test_case.associated_commands = chizu.associated_commands
+          if bullet.label == chizu.kkey
+            bullet.associated_commands = chizu.associated_commands
           end
         end
       end
@@ -167,9 +167,11 @@ class FutoSpec
 
   def init_browser
     #$driver = Selenium::WebDriver.for :firefox
-    $driver = Selenium::WebDriver.for :chrome
+    options = Selenium::WebDriver::Chrome::Options.new
+    options.add_argument('--headless')
+    $driver = Selenium::WebDriver.for :chrome, options: options
+    #$driver = Selenium::WebDriver.for :chrome
     $driver.navigate.to 'http://localhost:3000'
-  require 'byebug'; alias :breakpoint :byebug
   end
 end
 
