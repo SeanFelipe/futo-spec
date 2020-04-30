@@ -1,6 +1,7 @@
 require 'byebug'; alias :breakpoint :byebug
 require 'selenium-webdriver'
 require 'paint/pa'
+require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
 
 CHIZU_FILE = './chizu/futo_map.rb'
 #PLATFORM = :cli
@@ -165,13 +166,27 @@ class FutoSpec
     end
   end
 
+  def init_capybara
+    Capybara.configure do |config|
+      config.run_server = false
+      config.app_host = 'http://localhost:9293'
+      config.default_driver = :selenium_chrome_headless
+    end
+  end
+
+  def load_page_models
+    $Mousetrap = Mousetrap.new
+  end
+
   def init_browser
+    init_capybara
+    load_page_models
+=begin
     #$driver = Selenium::WebDriver.for :firefox
     options = Selenium::WebDriver::Chrome::Options.new
     options.add_argument('--headless')
     $driver = Selenium::WebDriver.for :chrome, options: options
-    #$driver = Selenium::WebDriver.for :chrome
-    $driver.navigate.to 'http://localhost:3000'
+=end
   end
 end
 
