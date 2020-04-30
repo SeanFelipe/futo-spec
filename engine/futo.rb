@@ -8,6 +8,10 @@ CHIZU_FILE = './chizu/futo_map.rb'
 #PLATFORM = :appium
 PLATFORM = :selenium
 
+def fx(loc)
+  $driver.find_xpath(loc)
+end
+
 class FutoBullet
   attr_accessor :label, :associated_commands
   def initialize(h)
@@ -166,11 +170,11 @@ class FutoSpec
     end
   end
 
-  def init_capybara
+  def init_capybara(drv=:selenium_chrome_headless)
     Capybara.configure do |config|
       config.run_server = false
       config.app_host = 'http://localhost:9293'
-      config.default_driver = :selenium_chrome_headless
+      config.default_driver = drv
     end
   end
 
@@ -179,8 +183,10 @@ class FutoSpec
   end
 
   def init_browser
-    init_capybara
+    init_capybara(:selenium_chrome)
+    $driver = Capybara.current_session.driver
     load_page_models
+    $Mousetrap.load
 =begin
     #$driver = Selenium::WebDriver.for :firefox
     options = Selenium::WebDriver::Chrome::Options.new
