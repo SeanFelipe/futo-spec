@@ -1,15 +1,15 @@
-require 'byebug'; alias :breakpoint :byebug
+require 'byebug'; alias :breakpoint :byebug #agbignore
 require 'selenium-webdriver'
 require 'paint/pa'
 require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
 
-CHIZU_FILE = './chizu/futo_map.rb'
+CHIZU_FILE = "#{ENV['FUTO_AUT']}/futo/chizu/mousetrap_map.rb"
 #PLATFORM = :cli
 #PLATFORM = :appium
 PLATFORM = :selenium
 
 def fx(loc)
-  $driver.find_xpath(loc)
+  $driver.find_xpath(loc).first
 end
 
 class FutoBullet
@@ -37,14 +37,16 @@ class ChizuEntry
 end
 
 class FutoSpec
-  attr_accessor :cases, :chizu, :unmatched
+  attr_accessor :cases, :chizu, :unmatched, :desc_file, :desc_lines
 
   #def initialize(desc, steps)
   def initialize(desc_file)
     @cases = Array.new
     @chizu = Array.new
     @unmatched = Array.new
-    load_test_cases(desc_file)
+    @desc_file = desc_file
+    @desc_lines = nil
+    load_test_cases
     load_chizu
     match_cases_to_chizu
   end
@@ -58,21 +60,24 @@ class FutoSpec
     @cases << FutoCase.new(@new_case_label, @new_case_bullets)
   end
 
-  def load_test_cases(fn)
+  def load_test_cases
     begin_new_case
 
-    File.open(fn) do |file|
-      lines = file.readlines
+    File.open(@desc_file) do |file|
+      @desc_lines = file.readlines(chomp:true)
 
-      lines.each do |ll|
+      @desc_lines.each do |ll|
         if ll == "\n"
+          # ending a test case
           add_case_to_spec
           begin_new_case
         elsif ll.lstrip.start_with? '-'
-          label = ll.split('-').last.chomp.lstrip
+          # bullet for a new test case
+          label = ll.split('-').last.lstrip
           @new_case_bullets << FutoBullet.new(label)
         else
-          @new_case_label = ll.chomp.lstrip
+          # start a new test case and give it a label
+          @new_case_label = ll.lstrip
         end
       end
     end
@@ -96,16 +101,16 @@ class FutoSpec
 
   def load_chizu
     File.open(CHIZU_FILE) do |file|
-      lines = file.readlines
+      lines = file.readlines(chomp:true)
       kkey = ''
       commands = Array.new
       lines.each do |ll|
         using_single_quotes = single_quoted_line?(ll)
         if ll.start_with? 'On'
           if using_single_quotes
-            kkey = ll.split("'")[1].chomp
+            kkey = ll.split("'")[1]
           else
-            kkey = ll.split('"')[1].chomp
+            kkey = ll.split('"')[1]
           end
         elsif ll.start_with? 'end'
           @chizu << ChizuEntry.new(kkey, commands)
@@ -114,7 +119,7 @@ class FutoSpec
         elsif ll == "\n"
           next
         else
-          commands << ll.lstrip.chomp
+          commands << ll.lstrip
         end
       end
     end
@@ -135,6 +140,7 @@ class FutoSpec
   def run
     if PLATFORM == :selenium
       init_browser
+      puts
       puts 'browser loaded, beginning test...'
     end
     exec_cases
@@ -157,14 +163,22 @@ class FutoSpec
   end
 
   def exec_cases
-    @cases.each do |test_case|
-      test_case.bullet_points.each do |bullet|
-        unless bullet.associated_commands.length == 0
-          bullet.associated_commands.each do |cmd|
-            eval cmd
-          end
+    @desc_lines.each do |desc_line|
+      #pa "matching #{desc_line}... ", :gray
+
+      @cases.each do |test_case|
+        if test_case.description == desc_line
+          pa "suite: #{test_case.description}", :green
         else
-          @unmatched << bullet
+          test_case.bullet_points.each do |bullet|
+            if bullet.label == desc_line.split('-').last.lstrip
+              pa "case: #{bullet.label}", :green
+              bullet.associated_commands.each do |cmd|
+                pa cmd, :green
+                eval cmd
+              end
+            end
+          end
         end
       end
     end
@@ -179,14 +193,15 @@ class FutoSpec
   end
 
   def load_page_models
-    $Mousetrap = Mousetrap.new
+    $Mousetrap = PageModels::Mousetrap.new
+    $Ticket = PageModels::Ticket.new
   end
 
   def init_browser
     init_capybara(:selenium_chrome)
+    #init_capybara(:selenium_chrome_headless)
     $driver = Capybara.current_session.driver
     load_page_models
-    $Mousetrap.load
 =begin
     #$driver = Selenium::WebDriver.for :firefox
     options = Selenium::WebDriver::Chrome::Options.new
