@@ -1,6 +1,8 @@
 require 'byebug'; alias :breakpoint :byebug #agbignore
 require 'selenium-webdriver'
 require 'paint/pa'
+require 'rspec/expectations'
+require 'capybara/rspec'
 require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
 
 CHIZU_FILE = "#{ENV['FUTO_AUT']}/futo/chizu/mousetrap_map.rb"
@@ -174,7 +176,7 @@ class FutoSpec
             if bullet.label == desc_line.split('-').last.lstrip
               pa "case: #{bullet.label}", :green
               bullet.associated_commands.each do |cmd|
-                pa cmd, :green
+                pa cmd, :green if cmd != 'breakpoint'
                 eval cmd
               end
             end
@@ -192,33 +194,34 @@ class FutoSpec
     end
   end
 
+  def init_selenium
+    #$driver = Selenium::WebDriver.for :firefox
+    options = Selenium::WebDriver::Chrome::Options.new
+    options.add_argument('--headless')
+    $driver = Selenium::WebDriver.for :chrome, options: options
+  end
+
   def reload_models_file
     load "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models.rb"
   end
+  alias :rr:reload_models_file
   alias :rreload :reload_models_file
 
   def load_page_models
     PageModels.constants.each do |cc|
-      eval "@#{cc} = PageModels::#{cc}.new"
+      eval "$#{cc} = PageModels::#{cc}.new"
     end
   end
 
   def init_browser
     `killall 'Google Chrome'`
+    #init_selenium
     init_capybara(:selenium_chrome)
     #init_capybara(:selenium_chrome_headless)
     $driver = Capybara.current_session.driver
     $window = $driver.browser.manage.window
     $window.resize_to 400, 1000
     load_page_models
-    @Mousetrap.load
-
-=begin
-    #$driver = Selenium::WebDriver.for :firefox
-    options = Selenium::WebDriver::Chrome::Options.new
-    options.add_argument('--headless')
-    $driver = Selenium::WebDriver.for :chrome, options: options
-=end
   end
 end
 
