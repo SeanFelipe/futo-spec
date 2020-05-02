@@ -192,16 +192,27 @@ class FutoSpec
     end
   end
 
+  def reload_models_file
+    load "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models.rb"
+  end
+  alias :rreload :reload_models_file
+
   def load_page_models
-    $Mousetrap = PageModels::Mousetrap.new
-    $Ticket = PageModels::Ticket.new
+    PageModels.constants.each do |cc|
+      eval "@#{cc} = PageModels::#{cc}.new"
+    end
   end
 
   def init_browser
+    `killall 'Google Chrome'`
     init_capybara(:selenium_chrome)
     #init_capybara(:selenium_chrome_headless)
     $driver = Capybara.current_session.driver
+    $window = $driver.browser.manage.window
+    $window.resize_to 400, 1000
     load_page_models
+    @Mousetrap.load
+
 =begin
     #$driver = Selenium::WebDriver.for :firefox
     options = Selenium::WebDriver::Chrome::Options.new
