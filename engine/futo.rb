@@ -39,6 +39,7 @@ class ChizuEntry
 end
 
 class FutoSpec
+  include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched, :desc_file, :desc_lines
 
   #def initialize(desc, steps)
@@ -214,7 +215,7 @@ class FutoSpec
   end
 
   def init_browser
-    `killall 'Google Chrome'`
+    #`killall 'Google Chrome'`
     #init_selenium
     init_capybara(:selenium_chrome)
     #init_capybara(:selenium_chrome_headless)
