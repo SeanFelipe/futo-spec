@@ -1,0 +1,13 @@
+missing / unmatched steps
+- unmatched description steps, should generate a sample chizu to copy-paste
+
+single vs double quotes
+- single quotes
+- double quotes
+
+test point with only one line, without a bullet -
+
+desc file which starts with a blank line
+
+single lines which start with a dash -
+- should be parsed as a test description *and* bullet

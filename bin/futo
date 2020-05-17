@@ -1,0 +1,5 @@
+#!/usr/bin/env ruby
+
+require 'futo-spec'
+fs = FutoSpec.new(ARGV.first)
+fs.run
