@@ -5,7 +5,6 @@ require 'rspec/expectations'
 require 'capybara/rspec'
 require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
 
-#CHIZU_FILE = "#{ENV['FUTO_AUT']}/futo/chizu/mousetrap_map.rb"
 CHIZU_FILE = './chizu/mousetrap.chizu'
 #PLATFORM = :cli
 #PLATFORM = :appium
@@ -173,18 +172,6 @@ class FutoSpec
     puts
   end
 
-  def without_leading_bullet_or_gt(line)
-    no_ws = line.lstrip
-    if no_ws.start_with? '-'
-      return no_ws.split('-').last
-    elsif no_ws.start_with? '>'
-      return no_ws.split('-').last
-    end
-  end
-
-  def load_cases
-  end
-
   def exec_cases
     @desc_lines.each do |desc_line|
       #pa "matching #{desc_line}... ", :gray
@@ -194,7 +181,6 @@ class FutoSpec
           pa "suite: #{test_case.description}", :green
         else
           test_case.bullet_points.each do |bullet|
-            without_leading_bullet_or_
             if bullet.label == desc_line.split('-').last.lstrip
               pa "case: #{bullet.label}", :green
               bullet.associated_commands.each do |cmd|
