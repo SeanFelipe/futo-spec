@@ -49,11 +49,40 @@ class FutoSpec
     @cases = Array.new
     @chizu = Array.new
     @unmatched = Array.new
-    @desc_file = desc_file
+    @desc_file = process_desc(desc_file)
     @desc_lines = nil
     load_bullet_points_into_test_case
     load_chizu
     match_cases_to_chizu
+  end
+
+  def process_desc(desc)
+    specific_line = false
+
+    if desc.include? ':'
+      specific_line = true
+      spl = desc.split(':')
+      fn = spl.first
+      idx = spl.last.to_i - 1 # line numbers are 1-indexed
+    else
+      fn = desc
+    end
+
+    all_lines = []
+    File.open(fn) do |file|
+      all_lines = file.readlines(chomp:true)
+    end
+
+    out = nil
+    unless specific_line
+      out = all_lines
+    else
+      out = all_lines[idx]
+    end
+
+    breakpoint
+    puts
+    return out
   end
 
   def begin_new_case
@@ -70,22 +99,22 @@ class FutoSpec
 
     File.open(@desc_file) do |file|
       @desc_lines = file.readlines(chomp:true)
+    end
 
-      @desc_lines.each do |ll|
-        if ll == "\n"
-          # ending a test case
-          add_case_to_spec
-          begin_new_case
+    @desc_lines.each do |ll|
+      if ll == "\n"
+        # ending a test case
+        add_case_to_spec
+        begin_new_case
+      else
+        no_ws = ll.lstrip
+        if no_ws.start_with?('-') || no_ws.start_with?('>')
+        # bullet for a new test case
+          label = no_ws.gsub(BULLET_POINTS_REGEX, '')
+          @new_case_bullets << FutoBullet.new(label.lstrip)
         else
-          no_ws = ll.lstrip
-          if no_ws.start_with?('-') || no_ws.start_with?('>')
-          # bullet for a new test case
-            label = no_ws.gsub(BULLET_POINTS_REGEX, '')
-            @new_case_bullets << FutoBullet.new(label.lstrip)
-          else
-            # start a new test case and give it a label
-            @new_case_label = ll.lstrip
-          end
+          # start a new test case and give it a label
+          @new_case_label = ll.lstrip
         end
       end
     end
@@ -145,15 +174,17 @@ class FutoSpec
     end
   end
 
-  def run
+  def run(headless=false)
     load_page_models
 
     if PLATFORM == :selenium
-      init_browser
+      init_browser(headless)
       puts
-      puts 'browser loaded, beginning test...'
+      pa 'browser loaded, beginning test...', :yellow
     end
+
     exec_cases
+
     if @unmatched.length > 0
       output_unmatched_commands
     end
@@ -178,17 +209,18 @@ class FutoSpec
 
       @cases.each do |test_case|
         if test_case.description == desc_line
-          pa "suite: #{test_case.description}", :green
+          pa "suite: #{test_case.description}", :cyan
         else
           test_case.bullet_points.each do |bullet|
             if bullet.label == desc_line.split('-').last.lstrip
-              pa "case: #{bullet.label}", :green
+              pa "case: #{bullet.label}", :cyan
               bullet.associated_commands.each do |cmd|
                 pa cmd, :green if cmd != 'breakpoint'
                 begin
                   eval cmd
                 rescue RSpec::Expectations::ExpectationNotMetError => e
-                  puts e
+                  pa e, :red
+                  breakpoint
                 end
               end
             end
@@ -204,13 +236,6 @@ class FutoSpec
       config.app_host = 'http://localhost:9293'
       config.default_driver = drv
     end
-  end
-
-  def init_selenium
-    #$driver = Selenium::WebDriver.for :firefox
-    options = Selenium::WebDriver::Chrome::Options.new
-    options.add_argument('--headless')
-    $driver = Selenium::WebDriver.for :chrome, options: options
   end
 
   def reload_models_file
@@ -238,13 +263,17 @@ class FutoSpec
     end
   end
 
-  def init_browser
-    #`killall 'Google Chrome'`
-    #init_selenium
-    init_capybara(:selenium_chrome)
-    #init_capybara(:selenium_chrome_headless)
+  def init_browser(headless=false)
+    if headless
+      puts 'headless browser mode'
+      init_capybara(:selenium_chrome_headless)
+    else
+      init_capybara(:selenium_chrome)
+    end
     $driver = Capybara.current_session.driver
     $window = $driver.browser.manage.window
-    $window.resize_to 400, 1000
+    #$window.resize_to 400, 1000
+    $window.move_to 700,0
+    $window.resize_to 800,600
   end
 end

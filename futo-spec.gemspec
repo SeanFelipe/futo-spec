@@ -16,7 +16,7 @@ Gem::Specification.new do |s|
   s.license     = 'MIT'
 
   s.add_runtime_dependency 'paint', '~> 2.2'
-  s.add_runtime_dependency 'selenium-webdriver', '~> 2.2'
+  s.add_runtime_dependency 'selenium-webdriver', '~> 3.1'
   s.add_runtime_dependency 'capybara', '~> 3.3'
   s.add_runtime_dependency 'rspec-expectations', '~> 3.9'
   s.add_development_dependency 'byebug', '~> 11.1'
