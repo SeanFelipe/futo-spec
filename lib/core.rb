@@ -2,6 +2,10 @@ require 'byebug'; alias :breakpoint :byebug #agbignore
 require 'selenium-webdriver'
 require 'paint/pa'
 require 'rspec/expectations'
+# 24K0 trying to get apparition to work, but I think Capybara wants to run rack / rails itself.
+# let's try connecting to an existing Chrome instead.
+#require 'capybara/rails'
+#require 'capybara/apparition'
 require 'capybara/rspec'
 require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
 
@@ -158,9 +162,16 @@ class FutoSpec
   def match_cases_to_chizu
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
+        matched = false
         @chizu.each do |chizu|
           if bullet.label == chizu.kkey
+            matched = true
             bullet.associated_commands = chizu.associated_commands
+          end
+          if ! matched
+            if ! @unmatched.include? bullet
+              @unmatched << bullet
+            end
           end
         end
       end
@@ -172,8 +183,8 @@ class FutoSpec
 
     if PLATFORM == :selenium
       init_browser(headless)
+      pa 'browser loaded, beginning test...', :default
       puts
-      pa 'browser loaded, beginning test...', :yellow
     end
 
     exec_cases
@@ -184,8 +195,8 @@ class FutoSpec
   end
 
   def output_unmatched_commands
-    puts; puts
-    pa "Missing chizu entries:", :cyan
+    puts;puts
+    pa "\tMissing chizu entries:", :cyan
     puts
     @unmatched.each do |un|
       pa "On '#{un.label}' do", :yellow
@@ -205,9 +216,9 @@ class FutoSpec
           pa "suite: #{test_case.description}", :cyan
         else
           test_case.bullet_points.each do |bullet|
-            puts "debugging: #{bullet.label}"
             if bullet.label == desc_line.split('-').last.lstrip
-              pa "case: #{bullet.label}", :cyan
+              puts
+              pa "case: #{bullet.label}", :gray
               bullet.associated_commands.each do |cmd|
                 pa cmd, :green if cmd != 'breakpoint'
                 begin
@@ -229,6 +240,7 @@ class FutoSpec
       config.run_server = false
       config.app_host = 'http://localhost:9293'
       config.default_driver = drv
+      #config.javascript_driver = :apparition
     end
   end
 
