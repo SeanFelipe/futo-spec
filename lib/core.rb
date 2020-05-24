@@ -49,8 +49,7 @@ class FutoSpec
     @cases = Array.new
     @chizu = Array.new
     @unmatched = Array.new
-    @desc_file = process_desc(desc_file)
-    @desc_lines = nil
+    @desc_lines = process_desc(desc_file)
     load_bullet_points_into_test_case
     load_chizu
     match_cases_to_chizu
@@ -62,14 +61,14 @@ class FutoSpec
     if desc.include? ':'
       specific_line = true
       spl = desc.split(':')
-      fn = spl.first
+      @desc_file = spl.first
       idx = spl.last.to_i - 1 # line numbers are 1-indexed
     else
-      fn = desc
+      @desc_file = desc
     end
 
     all_lines = []
-    File.open(fn) do |file|
+    File.open(@desc_file) do |file|
       all_lines = file.readlines(chomp:true)
     end
 
@@ -77,11 +76,9 @@ class FutoSpec
     unless specific_line
       out = all_lines
     else
-      out = all_lines[idx]
+      out = [all_lines[idx]]
     end
 
-    breakpoint
-    puts
     return out
   end
 
@@ -96,10 +93,6 @@ class FutoSpec
 
   def load_bullet_points_into_test_case
     begin_new_case
-
-    File.open(@desc_file) do |file|
-      @desc_lines = file.readlines(chomp:true)
-    end
 
     @desc_lines.each do |ll|
       if ll == "\n"
@@ -212,6 +205,7 @@ class FutoSpec
           pa "suite: #{test_case.description}", :cyan
         else
           test_case.bullet_points.each do |bullet|
+            puts "debugging: #{bullet.label}"
             if bullet.label == desc_line.split('-').last.lstrip
               pa "case: #{bullet.label}", :cyan
               bullet.associated_commands.each do |cmd|
