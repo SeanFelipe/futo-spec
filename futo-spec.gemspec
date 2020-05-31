@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'futo-spec'
-  s.version     = '0.1.0'
+  s.version     = '0.1.1'
   s.date        = '2020-05-16'
   s.summary     = "Test engine using bullet points. Like you're writing on an envelope."
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
@@ -11,9 +11,10 @@ Gem::Specification.new do |s|
     "lib/spec/basics.futo",
     "lib/spec/edge_cases.futo"
   ]
-  #s.executable  = 'futo'
   s.homepage    = 'https://rubygems.org/gems/futo-spec'
   s.license     = 'MIT'
+
+  s.executables << 'futo'
 
   s.add_runtime_dependency 'paint', '~> 2.2'
   s.add_runtime_dependency 'selenium-webdriver', '~> 3.1'

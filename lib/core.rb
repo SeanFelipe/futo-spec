@@ -1,18 +1,8 @@
 require 'byebug'; alias :breakpoint :byebug #agbignore
-require 'selenium-webdriver'
 require 'paint/pa'
 require 'rspec/expectations'
-# 24K0 trying to get apparition to work, but I think Capybara wants to run rack / rails itself.
-# let's try connecting to an existing Chrome instead.
-#require 'capybara/rails'
-#require 'capybara/apparition'
-require 'capybara/rspec'
-require_relative "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models/"
+require 'find'
 
-CHIZU_FILE = './chizu/mousetrap.chizu'
-#PLATFORM = :cli
-#PLATFORM = :appium
-PLATFORM = :selenium
 
 BULLET_POINTS_REGEX = /[\->]*/
 
@@ -50,12 +40,13 @@ class FutoSpec
 
   #def initialize(desc, steps)
   def initialize(desc_file)
+    @chizu_files = Array.new
     @cases = Array.new
     @chizu = Array.new
     @unmatched = Array.new
     @desc_lines = process_desc(desc_file)
+    find_and_load_chizu_files
     load_bullet_points_into_test_case
-    load_chizu
     match_cases_to_chizu
   end
 
@@ -133,8 +124,19 @@ class FutoSpec
     return single
   end
 
-  def load_chizu
-    File.open(CHIZU_FILE) do |file|
+  def find_and_load_chizu_files
+    Find.find('./chizu/') do |line|
+      @chizu_files << line if line.end_with? 'chizu'
+    end
+
+    @chizu_files.each {|ff| load_chizu ff}
+    breakpoint
+    puts
+  end
+
+  def load_chizu(ff)
+    File.open(ff) do |file|
+      breakpoint
       lines = file.readlines(chomp:true)
       kkey = ''
       commands = Array.new
@@ -178,22 +180,6 @@ class FutoSpec
     end
   end
 
-  def run(headless=false)
-    load_page_models
-
-    if PLATFORM == :selenium
-      init_browser(headless)
-      pa 'browser loaded, beginning test...', :default
-      puts
-    end
-
-    exec_cases
-
-    if @unmatched.length > 0
-      output_unmatched_commands
-    end
-  end
-
   def output_unmatched_commands
     puts;puts
     pa "\tMissing chizu entries:", :cyan
@@ -233,53 +219,5 @@ class FutoSpec
         end
       end
     end
-  end
-
-  def init_capybara(drv=:selenium_chrome_headless)
-    Capybara.configure do |config|
-      config.run_server = false
-      config.app_host = 'http://localhost:9293'
-      config.default_driver = drv
-      #config.javascript_driver = :apparition
-    end
-  end
-
-  def reload_models_file
-    load "#{ENV['FUTO_AUT']}/futo/pom/mousetrap_models.rb"
-  end
-  alias :rr :reload_models_file
-  alias :rreload :reload_models_file
-
-  def easy_alias(cc)
-    aka = cc.to_s.scan(/[A-Z]+/)
-    if aka.length > 0
-      final = aka
-      if final.length == 1
-        # add a second char to the alias if it's only one char
-        final = aka.insert(0, aka.first)
-      end
-      eval "$#{final.join} = PageModels::#{cc}.new"
-    end
-  end
-
-  def load_page_models
-    PageModels.constants.each do |cc|
-      eval "$#{cc} = PageModels::#{cc}.new"
-      easy_alias(cc)
-    end
-  end
-
-  def init_browser(headless=false)
-    if headless
-      puts 'headless browser mode'
-      init_capybara(:selenium_chrome_headless)
-    else
-      init_capybara(:selenium_chrome)
-    end
-    $driver = Capybara.current_session.driver
-    $window = $driver.browser.manage.window
-    #$window.resize_to 400, 1000
-    $window.move_to 700,0
-    $window.resize_to 800,600
   end
 end

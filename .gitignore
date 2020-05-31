@@ -2,4 +2,7 @@
 *.log
 *.swp
 .byebug*
-
+.ruby-version
+.ruby-gemset
+/lib/spec/r
+ssfuto

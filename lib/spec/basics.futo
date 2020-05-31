@@ -1,4 +1,4 @@
 basic mapping
-- should map a bulleted line as a test case
-- should map a non-bulleted line as a test description
+- lines with bullets should map as a normal test case
+- lines without bullets should map as a test description
 - newlines \n should start a new case
