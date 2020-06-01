@@ -72,7 +72,7 @@ class FutoSpec
     desc_file = spl.first
     idx = spl.last.to_i - 1 # line numbers are 1-indexed
 
-    File.open(desc) do |file|
+    File.open(desc_file) do |file|
       all_lines = file.readlines(chomp:true)
       specified_line = all_lines[idx]
       @desc_lines << specified_line
@@ -147,7 +147,6 @@ class FutoSpec
 
   def load_chizu(ff)
     File.open(ff) do |file|
-      breakpoint
       lines = file.readlines(chomp:true)
       kkey = ''
       commands = Array.new
@@ -173,18 +172,21 @@ class FutoSpec
   end
 
   def match_cases_to_chizu
-    breakpoint
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
-        @chizu.each do |chizu|
-          if bullet.label == chizu.kkey
-            matched = true
-            bullet.associated_commands = chizu.associated_commands
-          end
-          if ! matched
-            if ! @unmatched.include? bullet
-              @unmatched << bullet
+        if @chizu.length == 0
+          @unmatched << bullet
+        else
+          @chizu.each do |chizu|
+            if bullet.label == chizu.kkey
+              matched = true
+              bullet.associated_commands = chizu.associated_commands
+            end
+            if ! matched
+              if ! @unmatched.include? bullet
+                @unmatched << bullet
+              end
             end
           end
         end
@@ -193,7 +195,7 @@ class FutoSpec
   end
 
   def output_unmatched_commands
-    puts;puts
+    puts
     pa "\tMissing chizu entries:", :cyan
     puts
     @unmatched.each do |un|
@@ -202,33 +204,30 @@ class FutoSpec
       pa 'end', :yellow
       puts
     end
-    puts
   end
 
   def run
     exec_cases
+    output_unmatched_commands
   end
 
   def exec_cases
     @desc_lines.each do |desc_line|
-      #pa "matching #{desc_line}... ", :gray
-
       @cases.each do |test_case|
         if test_case.description == desc_line
           pa "suite: #{test_case.description}", :cyan
         else
           test_case.bullet_points.each do |bullet|
-            if bullet.label == desc_line.split('-').last.lstrip
-              puts
-              pa "case: #{bullet.label}", :gray
-              bullet.associated_commands.each do |cmd|
-                pa cmd, :green if cmd != 'breakpoint'
-                begin
-                  eval cmd
-                rescue RSpec::Expectations::ExpectationNotMetError => e
-                  pa e, :red
-                  breakpoint
-                end
+            #puts
+            #pa "case: #{bullet.label}", :gray
+            bullet.associated_commands.each do |cmd|
+              breakpoint
+              pa cmd, :green if cmd != 'breakpoint'
+              begin
+                eval cmd
+              rescue RSpec::Expectations::ExpectationNotMetError => e
+                pa e, :red
+                breakpoint
               end
             end
           end
