@@ -2,3 +2,10 @@ basic mapping
 - lines with bullets should map as a normal test case
 - lines without bullets should map as a test description
 - newlines \n should start a new case
+
+specific line
+- when specific line requested with colon :, only specific line should run
+- if specific line is description not bullet point, all bullets in that case should run
+
+wrapped / long lines
+- what to do with long bullets or descriptions that have a <Cr> for readability ?

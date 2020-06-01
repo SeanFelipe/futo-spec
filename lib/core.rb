@@ -38,43 +38,56 @@ class FutoSpec
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched, :desc_file, :desc_lines
 
-  #def initialize(desc, steps)
-  def initialize(desc_file)
+  def initialize(desc_file=nil)
     @chizu_files = Array.new
     @cases = Array.new
     @chizu = Array.new
+    @desc_lines = Array.new
     @unmatched = Array.new
-    @desc_lines = process_desc(desc_file)
+
+    if desc_file == nil
+      discover_futo_files
+    else
+      process_desc(desc_file)
+    end
+
     find_and_load_chizu_files
     load_bullet_points_into_test_case
     match_cases_to_chizu
   end
 
-  def process_desc(desc)
-    specific_line = false
+  def discover_futo_files
+    futo_files = []
 
-    if desc.include? ':'
-      specific_line = true
-      spl = desc.split(':')
-      @desc_file = spl.first
-      idx = spl.last.to_i - 1 # line numbers are 1-indexed
-    else
-      @desc_file = desc
+    Find.find('.') do |line|
+      futo_files << line if line.end_with? '.futo'
     end
 
-    all_lines = []
-    File.open(@desc_file) do |file|
+    futo_files.each {|ff| process_desc ff}
+  end
+
+
+  def process_specific_line_only(desc)
+    spl = desc.split(':')
+    desc_file = spl.first
+    idx = spl.last.to_i - 1 # line numbers are 1-indexed
+
+    File.open(desc) do |file|
       all_lines = file.readlines(chomp:true)
+      specified_line = all_lines[idx]
+      @desc_lines << specified_line
     end
+  end
 
-    out = nil
-    unless specific_line
-      out = all_lines
+  def process_desc(desc)
+    if desc.include? ':'
+      process_specific_line_only(desc)
     else
-      out = [all_lines[idx]]
+      File.open(desc) do |file|
+        file_lines = file.readlines(chomp:true)
+        @desc_lines += file_lines
+      end
     end
-
-    return out
   end
 
   def begin_new_case
@@ -130,8 +143,6 @@ class FutoSpec
     end
 
     @chizu_files.each {|ff| load_chizu ff}
-    breakpoint
-    puts
   end
 
   def load_chizu(ff)
@@ -162,6 +173,7 @@ class FutoSpec
   end
 
   def match_cases_to_chizu
+    breakpoint
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
@@ -191,6 +203,10 @@ class FutoSpec
       puts
     end
     puts
+  end
+
+  def run
+    exec_cases
   end
 
   def exec_cases
