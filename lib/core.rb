@@ -36,36 +36,38 @@ end
 
 class FutoSpec
   include RSpec::Matchers
-  attr_accessor :cases, :chizu, :unmatched, :desc_file, :desc_lines
+  attr_accessor :cases, :chizu, :unmatched
 
-  def initialize(desc_file=nil)
-    @chizu_files = Array.new
+  def initialize(specified_file=nil)
     @cases = Array.new
     @chizu = Array.new
-    @desc_lines = Array.new
     @unmatched = Array.new
 
-    if desc_file == nil
-      discover_futo_files
+    test_case_lines = nil
+    if specified_file == nil
+      test_case_lines = discover_and_process_futo_files
     else
-      process_desc(desc_file)
+      test_case_lines = process_specific_file(specified_file)
     end
 
+    breakpoint
+
     find_and_load_chizu_files
-    load_bullet_points_into_test_case
+    load_bullet_points_into_test_case(test_case_lines)
     match_cases_to_chizu
   end
 
-  def discover_futo_files
+  def discover_and_process_futo_files
     futo_files = []
+    test_case_lines = []
 
     Find.find('.') do |line|
       futo_files << line if line.end_with? '.futo'
     end
 
-    futo_files.each {|ff| process_desc ff}
+    futo_files.each { |ff| test_case_lines += process_specific_file(ff) }
+    return test_case_lines
   end
-
 
   def process_specific_line_only(desc)
     spl = desc.split(':')
@@ -75,17 +77,17 @@ class FutoSpec
     File.open(desc_file) do |file|
       all_lines = file.readlines(chomp:true)
       specified_line = all_lines[idx]
-      @desc_lines << specified_line
+      return specified_line
     end
   end
 
-  def process_desc(desc)
-    if desc.include? ':'
-      process_specific_line_only(desc)
+  def process_specific_file(spec)
+    if spec.include? ':'
+      return process_specific_line_only(spec)
     else
-      File.open(desc) do |file|
+      File.open(spec) do |file|
         file_lines = file.readlines(chomp:true)
-        @desc_lines += file_lines
+        return file_lines
       end
     end
   end
@@ -99,10 +101,10 @@ class FutoSpec
     @cases << FutoCase.new(@new_case_label, @new_case_bullets)
   end
 
-  def load_bullet_points_into_test_case
+  def load_bullet_points_into_test_case(test_case_lines)
     begin_new_case
 
-    @desc_lines.each do |ll|
+    test_case_lines.each do |ll|
       if ll == "\n"
         # ending a test case
         add_case_to_spec
@@ -138,11 +140,13 @@ class FutoSpec
   end
 
   def find_and_load_chizu_files
+    chizu_files = []
+
     Find.find('./chizu/') do |line|
-      @chizu_files << line if line.end_with? 'chizu'
+      chizu_files << line if line.end_with? 'chizu'
     end
 
-    @chizu_files.each {|ff| load_chizu ff}
+    chizu_files.each {|ff| load_chizu ff}
   end
 
   def load_chizu(ff)
@@ -172,6 +176,7 @@ class FutoSpec
   end
 
   def match_cases_to_chizu
+    breakpoint
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
@@ -212,24 +217,16 @@ class FutoSpec
   end
 
   def exec_cases
-    @desc_lines.each do |desc_line|
-      @cases.each do |test_case|
-        if test_case.description == desc_line
-          pa "suite: #{test_case.description}", :cyan
-        else
-          test_case.bullet_points.each do |bullet|
-            #puts
-            #pa "case: #{bullet.label}", :gray
-            bullet.associated_commands.each do |cmd|
-              breakpoint
-              pa cmd, :green if cmd != 'breakpoint'
-              begin
-                eval cmd
-              rescue RSpec::Expectations::ExpectationNotMetError => e
-                pa e, :red
-                breakpoint
-              end
-            end
+    @cases.each do |test_case|
+      test_case.bullet_points.each do |bullet|
+        #puts
+        #pa "case: #{bullet.label}", :gray
+        bullet.associated_commands.each do |cmd|
+          pa cmd, :green if cmd != 'breakpoint'
+          begin
+            eval cmd
+          rescue RSpec::Expectations::ExpectationNotMetError => e
+            pa e, :red
           end
         end
       end

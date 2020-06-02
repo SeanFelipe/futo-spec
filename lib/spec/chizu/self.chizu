@@ -1,0 +1,40 @@
+On 'lines with bullets should map as a normal test case' do
+  breakpoint
+  puts
+end
+
+On 'lines without bullets should map as a test description' do
+  # TODO
+end
+
+On 'newlines \n should start a new case' do
+  # TODO
+end
+
+On 'when specific line requested with colon :, only specific line should run' do
+  # TODO
+end
+
+On 'if specific line is description not bullet point, all bullets in that case should run' do
+  # TODO
+end
+
+On 'what to do with long bullets or descriptions that have a <Cr for readability ?' do
+  # TODO
+end
+
+On 'unmatched description steps, should generate a sample chizu to copypaste' do
+  # TODO
+end
+
+On 'single quotes' do
+  # TODO
+end
+
+On 'double quotes' do
+  # TODO
+end
+
+On 'should be parsed as a test description *and* bullet' do
+  # TODO
+end
