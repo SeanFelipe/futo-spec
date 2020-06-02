@@ -100,6 +100,18 @@ class FutoSpec
     @new_case_bullets = Array.new
   end
 
+  def find_and_load_state
+  end
+
+  def new_bullet(no_ws)
+    label = no_ws.gsub(BULLET_POINTS_REGEX, '').lstrip
+    @new_case_bullets << FutoBullet.new(label)
+  end
+
+  def new_label(ll)
+    @new_case_label = ll.lstrip
+  end
+
   def create_test_cases_and_load_bullet_points(test_case_lines)
     begin_new_case
 
@@ -111,12 +123,9 @@ class FutoSpec
       else
         no_ws = ll.lstrip
         if no_ws.start_with?('-') || no_ws.start_with?('>')
-        # bullet for a new test case
-          label = no_ws.gsub(BULLET_POINTS_REGEX, '').lstrip
-          @new_case_bullets << FutoBullet.new(label)
+          new_bullet(no_ws)
         else
-          # start a new test case and give it a label
-          @new_case_label = ll.lstrip
+          new_label(ll)
         end
       end
     end
@@ -193,10 +202,10 @@ class FutoSpec
                 matched = true
                 bullet.associated_commands = chizu.associated_commands
               end
-              if ! matched
-                if ! @unmatched.include? bullet
-                  @unmatched << bullet
-                end
+            end
+            if ! matched
+              if ! @unmatched.include? bullet
+                @unmatched << bullet
               end
             end
           end

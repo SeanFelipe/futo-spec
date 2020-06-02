@@ -1,4 +1,5 @@
 basic mapping
+* using state: |basic|
 - lines with bullets should map as a normal test case
 - lines without bullets should map as a test description
 - newlines \n should start a new case
