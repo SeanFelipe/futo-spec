@@ -50,11 +50,9 @@ class FutoSpec
       test_case_lines = process_specific_file(specified_file)
     end
 
-    breakpoint
-
     find_and_load_chizu_files
-    load_bullet_points_into_test_case(test_case_lines)
-    match_cases_to_chizu
+    create_test_cases_and_load_bullet_points(test_case_lines)
+    load_commands_into_test_cases_from_chizu
   end
 
   def discover_and_process_futo_files
@@ -92,29 +90,30 @@ class FutoSpec
     end
   end
 
-  def begin_new_case
-    @new_case_label = ''
-    @new_case_bullets = Array.new
-  end
 
   def add_case_to_spec
     @cases << FutoCase.new(@new_case_label, @new_case_bullets)
   end
 
-  def load_bullet_points_into_test_case(test_case_lines)
+  def begin_new_case
+    @new_case_label = ''
+    @new_case_bullets = Array.new
+  end
+
+  def create_test_cases_and_load_bullet_points(test_case_lines)
     begin_new_case
 
     test_case_lines.each do |ll|
-      if ll == "\n"
-        # ending a test case
+      if ll == ''
+        # blank lines add a new case
         add_case_to_spec
         begin_new_case
       else
         no_ws = ll.lstrip
         if no_ws.start_with?('-') || no_ws.start_with?('>')
         # bullet for a new test case
-          label = no_ws.gsub(BULLET_POINTS_REGEX, '')
-          @new_case_bullets << FutoBullet.new(label.lstrip)
+          label = no_ws.gsub(BULLET_POINTS_REGEX, '').lstrip
+          @new_case_bullets << FutoBullet.new(label)
         else
           # start a new test case and give it a label
           @new_case_label = ll.lstrip
@@ -122,6 +121,7 @@ class FutoSpec
       end
     end
 
+    # catch anything left over
     add_case_to_spec
   end
 
@@ -175,8 +175,7 @@ class FutoSpec
     end
   end
 
-  def match_cases_to_chizu
-    breakpoint
+  def load_commands_into_test_cases_from_chizu
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
@@ -213,10 +212,11 @@ class FutoSpec
 
   def run
     exec_cases
-    output_unmatched_commands
+    #output_unmatched_commands
   end
 
   def exec_cases
+    breakpoint
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         #puts

@@ -1,6 +1,5 @@
 On 'lines with bullets should map as a normal test case' do
-  breakpoint
-  puts
+  puts "lines with bullets test case"
 end
 
 On 'lines without bullets should map as a test description' do
