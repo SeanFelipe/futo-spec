@@ -166,7 +166,7 @@ class FutoSpec
           @chizu << ChizuEntry.new(kkey, commands)
           kkey = ''
           commands = Array.new
-        elsif ll == "\n"
+        elsif ll == "\n" || ll == ''
           next
         else
           commands << ll.lstrip
@@ -180,16 +180,23 @@ class FutoSpec
       test_case.bullet_points.each do |bullet|
         matched = false
         if @chizu.length == 0
+          # no chizus found, everything will be unmatched
           @unmatched << bullet
         else
           @chizu.each do |chizu|
-            if bullet.label == chizu.kkey
-              matched = true
-              bullet.associated_commands = chizu.associated_commands
-            end
-            if ! matched
-              if ! @unmatched.include? bullet
-                @unmatched << bullet
+            if chizu.associated_commands.include?('# TODO') ||
+                chizu.associated_commands.include?('#TODO') ||
+                chizu.associated_commands.include?('TODO')
+              next
+            else
+              if bullet.label == chizu.kkey
+                matched = true
+                bullet.associated_commands = chizu.associated_commands
+              end
+              if ! matched
+                if ! @unmatched.include? bullet
+                  @unmatched << bullet
+                end
               end
             end
           end
@@ -199,8 +206,8 @@ class FutoSpec
   end
 
   def output_unmatched_commands
-    puts
-    pa "\tMissing chizu entries:", :cyan
+    puts; puts
+    pa "Missing chizu entries:", :yellow
     puts
     @unmatched.each do |un|
       pa "On '#{un.label}' do", :yellow
@@ -212,11 +219,11 @@ class FutoSpec
 
   def run
     exec_cases
-    #output_unmatched_commands
+    output_unmatched_commands
   end
 
   def exec_cases
-    breakpoint
+    puts
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         #puts
