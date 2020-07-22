@@ -6,9 +6,6 @@ require 'find'
 
 BULLET_POINTS_REGEX = /[\->]*/
 
-def fx(loc)
-  $driver.find_xpath(loc).first
-end
 
 class FutoBullet
   attr_accessor :label, :associated_commands
@@ -67,7 +64,7 @@ class FutoSpec
     return test_case_lines
   end
 
-  def process_specific_line_only(desc)
+  def specific_line_requested(desc)
     spl = desc.split(':')
     desc_file = spl.first
     idx = spl.last.to_i - 1 # line numbers are 1-indexed
@@ -81,7 +78,7 @@ class FutoSpec
 
   def process_specific_file(spec)
     if spec.include? ':'
-      return process_specific_line_only(spec)
+      return specific_line_requested(spec)
     else
       File.open(spec) do |file|
         file_lines = file.readlines(chomp:true)
@@ -89,7 +86,6 @@ class FutoSpec
       end
     end
   end
-
 
   def add_case_to_spec
     @cases << FutoCase.new(@new_case_label, @new_case_bullets)
@@ -100,30 +96,56 @@ class FutoSpec
     @new_case_bullets = Array.new
   end
 
-  def find_and_load_state
-  end
-
-  def new_bullet(no_ws)
-    label = no_ws.gsub(BULLET_POINTS_REGEX, '').lstrip
+  def new_bullet(line)
+    label = line.sub(BULLET_POINTS_REGEX, '').lstrip
+    puts label
     @new_case_bullets << FutoBullet.new(label)
   end
 
-  def new_label(ll)
-    @new_case_label = ll.lstrip
+  def new_label(line)
+    @new_case_label = line
+  end
+
+  def is_newline?(line)
+    return line == ''
+  end
+
+  def is_setup?(line)
+    return line.start_with?('** using setup:') ||
+      line.start_with?('**')
+  end
+
+  def setup_test(line)
+    prefix = line.split(':').last.lstrip
+    fn = "./setup/#{prefix}.setup.rb"
+    breakpoint
+    if File.exist?(fn)
+      load(fn)
+    else
+      pa "failed to find setup file #{fn} for line: #{line}", :red
+    end
+    breakpoint
+    puts
+  end
+
+  def is_bullet?(line)
+    return line.start_with?('-') || line.start_with?('>')
   end
 
   def create_test_cases_and_load_bullet_points(test_case_lines)
     begin_new_case
 
-    test_case_lines.each do |ll|
-      if ll == ''
-        # blank lines add a new case
+    test_case_lines.each do |line|
+      l0 = line.gsub('(DONE)','').gsub('(done)','')
+      ll = l0.lstrip.rstrip
+      if is_newline? ll
         add_case_to_spec
         begin_new_case
       else
-        no_ws = ll.lstrip
-        if no_ws.start_with?('-') || no_ws.start_with?('>')
-          new_bullet(no_ws)
+        if is_setup? ll
+          setup_test(ll)
+        elsif is_bullet? ll
+          new_bullet(ll)
         else
           new_label(ll)
         end
@@ -151,7 +173,7 @@ class FutoSpec
   def find_and_load_chizu_files
     chizu_files = []
 
-    Find.find('./chizu/') do |line|
+    Find.find('./_glue/chizu/') do |line|
       chizu_files << line if line.end_with? 'chizu'
     end
 
@@ -184,6 +206,16 @@ class FutoSpec
     end
   end
 
+  def is_todo?(chizu)
+    if chizu.associated_commands.include?('# TODO') ||
+        chizu.associated_commands.include?('#TODO') ||
+        chizu.associated_commands.include?('TODO')
+      return true
+    else
+      return false
+    end
+  end
+
   def load_commands_into_test_cases_from_chizu
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
@@ -193,9 +225,7 @@ class FutoSpec
           @unmatched << bullet
         else
           @chizu.each do |chizu|
-            if chizu.associated_commands.include?('# TODO') ||
-                chizu.associated_commands.include?('#TODO') ||
-                chizu.associated_commands.include?('TODO')
+            if is_todo? chizu
               next
             else
               if bullet.label == chizu.kkey
@@ -215,7 +245,7 @@ class FutoSpec
   end
 
   def output_unmatched_commands
-    puts; puts
+    puts
     pa "Missing chizu entries:", :yellow
     puts
     @unmatched.each do |un|

@@ -1,5 +1,5 @@
 basic mapping
-* using state: |basic|
+** using setup: basics
 - lines with bullets should map as a normal test case
 - lines without bullets should map as a test description
 - newlines \n should start a new case
@@ -10,3 +10,7 @@ specific line
 
 wrapped / long lines
 - what to do with long bullets or descriptions that have a <Cr> for readability ?
+
+state
+- lines starting with "** using setup:" load state for the whole file
+- will need levels of scope for this

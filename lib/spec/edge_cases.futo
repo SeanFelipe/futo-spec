@@ -11,3 +11,7 @@ desc file which starts with a blank line
 
 single lines which start with a dash -
 - should be parsed as a test description *and* bullet
+
+unmatched should work properly
+- matched should not appear in unmatched output
+- see commit :2087519 for the fix; an indentation problem caused a bug

@@ -1,0 +1,2 @@
+$foo = 'bar'
+BAZ = 'ish'
