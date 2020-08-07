@@ -47,9 +47,19 @@ class FutoSpec
       test_case_lines = process_specific_file(specified_file)
     end
 
+    look_for_envrb_and_parse
     find_and_load_chizu_files
     create_test_cases_and_load_bullet_points(test_case_lines)
     load_commands_into_test_cases_from_chizu
+  end
+
+  def look_for_envrb_and_parse
+    if Dir.children(Dir.pwd).include? '_glue'
+      if Dir.children("#{Dir.pwd}/_glue").include? 'env.rb'
+        puts 'found _glue/env.rb'
+        load '_glue/env.rb'
+      end
+    end
   end
 
   def discover_and_process_futo_files
@@ -118,13 +128,11 @@ class FutoSpec
   def setup_test(line)
     prefix = line.split(':').last.lstrip
     fn = "./setup/#{prefix}.setup.rb"
-    breakpoint
     if File.exist?(fn)
       load(fn)
     else
       pa "failed to find setup file #{fn} for line: #{line}", :red
     end
-    breakpoint
     puts
   end
 
@@ -268,7 +276,7 @@ class FutoSpec
         #puts
         #pa "case: #{bullet.label}", :gray
         bullet.associated_commands.each do |cmd|
-          pa cmd, :green if cmd != 'breakpoint'
+          pa cmd, :yellow if cmd != 'breakpoint'
           begin
             eval cmd
           rescue RSpec::Expectations::ExpectationNotMetError => e
