@@ -6,7 +6,7 @@ Gem::Specification.new do |s|
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
   s.authors     = ["Sean Felipe Wolfe"]
   s.email       = 'sean@addlightness.tech'
-  s.files       = Dir['lib/**/*.rb', 'lib/spec/*.futo', 'lib/spec/**/*.chizu'] + 'bin/futo'
+  s.files       = Dir['lib/**/*.rb', 'lib/spec/*.futo', 'lib/spec/**/*.chizu', 'bin/futo']
   s.homepage    = 'https://rubygems.org/gems/futo-spec'
   s.license     = 'MIT'
 
