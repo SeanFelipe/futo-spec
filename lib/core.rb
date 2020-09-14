@@ -120,14 +120,14 @@ class FutoSpec
     return line == ''
   end
 
-  def is_setup?(line)
-    return line.start_with?('** using setup:') ||
+  def is_initialize?(line)
+    return line.start_with?('** initialize with:') ||
       line.start_with?('**')
   end
 
-  def setup_test(line)
+  def init_test(line)
     prefix = line.split(':').last.lstrip
-    fn = "./setup/#{prefix}.setup.rb"
+    fn = "./initialize/#{prefix}.initialize.rb"
     if File.exist?(fn)
       load(fn)
     else
@@ -150,8 +150,8 @@ class FutoSpec
         add_case_to_spec
         begin_new_case
       else
-        if is_setup? ll
-          setup_test(ll)
+        if is_initialize? ll
+          init_test(ll)
         elsif is_bullet? ll
           new_bullet(ll)
         else
