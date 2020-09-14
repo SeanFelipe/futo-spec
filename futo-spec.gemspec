@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'futo-spec'
   s.version     = '0.1.2'
-  s.date        = '2020-08-6'
+  s.date        = '2020-09-14'
   s.summary     = "Test engine using bullet points. Like you're writing on an envelope."
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
   s.authors     = ["Sean Felipe Wolfe"]
