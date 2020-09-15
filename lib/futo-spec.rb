@@ -53,10 +53,10 @@ class FutoSpec
   end
 
   def look_for_envrb_and_parse
-    if Dir.children(Dir.pwd).include? '_glue'
-      if Dir.children("#{Dir.pwd}/_glue").include? 'env.rb'
-        puts 'found _glue/env.rb'
-        load '_glue/env.rb'
+    if Dir.children("#{Dir.pwd}/futo-spec").include? '_glue'
+      if Dir.children("#{Dir.pwd}/futo-spec/_glue").include? 'env.rb'
+        puts 'found futo-spec/_glue/env.rb'
+        load 'futo-spec/_glue/env.rb'
       end
     end
   end
@@ -180,7 +180,7 @@ class FutoSpec
   def find_and_load_chizu_files
     chizu_files = []
 
-    Find.find('./_glue/chizu/') do |line|
+    Find.find('futo-spec/_glue/chizu/') do |line|
       chizu_files << line if line.end_with? 'chizu'
     end
 
