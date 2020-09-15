@@ -1,4 +1,3 @@
-require 'byebug'; alias :breakpoint :byebug #agbignore
 require 'paint/pa'
 require 'rspec/expectations'
 require 'find'
