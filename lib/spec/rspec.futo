@@ -1,0 +1,4 @@
+check should syntax
+- author personally prefers should
+- others erroneously prefer expect.to
+-> should probably expect to handle both.
