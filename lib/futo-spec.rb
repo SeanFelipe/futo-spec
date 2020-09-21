@@ -194,6 +194,7 @@ class FutoSpec
 
     Find.find('futo-spec/_glue/chizu/') do |ff|
       chizu_files << ff if ff.end_with? 'chizu'
+      chizu_files << ff if ff.end_with? 'rb'
     end
 
     chizu_files.each {|ff| load_chizu ff}
