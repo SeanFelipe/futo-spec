@@ -1,0 +1,3 @@
+variable scoping
+- local variable scoping / local to a block in a chizu step
+- @ and $ already work
