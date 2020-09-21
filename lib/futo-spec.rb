@@ -1,9 +1,16 @@
 require 'paint/pa'
 require 'rspec/expectations'
 require 'find'
+require 'rspec'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
+
+RSpec.configure do |config|
+  config.expect_with :rspec do |c|
+    c.syntax = :should
+  end
+end
 
 
 class FutoBullet
@@ -12,6 +19,7 @@ class FutoBullet
     @label = h
     @associated_commands = Array.new
   end
+  def to_s; return @label; end
 end
 
 class FutoCase
@@ -20,6 +28,7 @@ class FutoCase
     @description = h
     @bullet_points = b_arr
   end
+  def to_s; return @description; end
 end
 
 class ChizuEntry
@@ -28,6 +37,7 @@ class ChizuEntry
     @kkey = h
     @associated_commands = c_arr
   end
+  def to_s; return @kkey; end
 end
 
 class FutoSpec
@@ -40,7 +50,7 @@ class FutoSpec
     @unmatched = Array.new
 
     test_case_lines = nil
-    if specified_file == nil
+    unless specified_file
       test_case_lines = discover_and_process_futo_files
     else
       test_case_lines = process_specific_file(specified_file)
@@ -65,8 +75,10 @@ class FutoSpec
     futo_files = []
     test_case_lines = []
 
-    Find.find('.') do |line|
-      futo_files << line if line.end_with? '.futo'
+    Find.find('./futo-spec/') do |ff|
+      if ff.end_with? '.futo' or ff.end_with? 'spec'
+        futo_files << ff
+      end
     end
 
     futo_files.each { |ff| test_case_lines += process_specific_file(ff) }
@@ -107,7 +119,7 @@ class FutoSpec
 
   def new_bullet(line)
     label = line.sub(BULLET_POINTS_REGEX, '').lstrip
-    puts label
+    #puts label
     @new_case_bullets << FutoBullet.new(label)
   end
 
@@ -180,8 +192,8 @@ class FutoSpec
   def find_and_load_chizu_files
     chizu_files = []
 
-    Find.find('futo-spec/_glue/chizu/') do |line|
-      chizu_files << line if line.end_with? 'chizu'
+    Find.find('futo-spec/_glue/chizu/') do |ff|
+      chizu_files << ff if ff.end_with? 'chizu'
     end
 
     chizu_files.each {|ff| load_chizu ff}
@@ -240,10 +252,10 @@ class FutoSpec
                 bullet.associated_commands = chizu.associated_commands
               end
             end
-            if ! matched
-              if ! @unmatched.include? bullet
-                @unmatched << bullet
-              end
+          end
+          if ! matched
+            unless @unmatched.include? bullet
+              @unmatched << bullet
             end
           end
         end
@@ -275,7 +287,7 @@ class FutoSpec
         #puts
         #pa "case: #{bullet.label}", :gray
         bullet.associated_commands.each do |cmd|
-          pa cmd, :yellow if cmd != 'breakpoint'
+          pa cmd, :cyan if cmd != 'breakpoint'
           begin
             eval cmd
           rescue RSpec::Expectations::ExpectationNotMetError => e
