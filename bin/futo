@@ -3,7 +3,6 @@
 require 'futo-spec'
 dry_run = false
 if ARGV.include? '--dry-run'
-  puts "dry run"
   dry_run = true
   ARGV.delete('--dry-run')
 end
