@@ -1,11 +1,10 @@
 #!/usr/bin/env ruby
 
 require 'futo-spec'
-dry_run = false
 if ARGV.include? '--dry-run'
-  dry_run = true
+  $dry_run = true
   ARGV.delete('--dry-run')
 end
 
 fs = FutoSpec.new(ARGV[1])
-fs.run(dry_run)
+fs.run($dry_run)
