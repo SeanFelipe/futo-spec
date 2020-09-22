@@ -286,7 +286,7 @@ class FutoSpec
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         #puts
-        #pa "case: #{bullet.label}", :gray
+        pa "case: #{bullet.label}", :gray
         bullet.associated_commands.each do |cmd|
           pa cmd, :cyan if cmd != 'breakpoint'
           begin
