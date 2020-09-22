@@ -276,8 +276,8 @@ class FutoSpec
     end
   end
 
-  def run
-    exec_cases
+  def run(dry_run=false)
+    exec_cases unless dry_run
     output_unmatched_commands
   end
 
