@@ -13,13 +13,11 @@ Gem::Specification.new do |s|
   s.executables << 'futo'
 
   s.add_runtime_dependency 'paint', '~> 2.2'
-  s.add_runtime_dependency 'apparition'
+  s.add_runtime_dependency 'apparition', '~> 0.6'
   s.add_runtime_dependency 'selenium-webdriver', '~> 3.1'
   s.add_runtime_dependency 'webdrivers', '~> 4.4'
   s.add_runtime_dependency 'capybara', '~> 3.3'
   s.add_runtime_dependency 'rspec', '~> 3.9'
   s.add_runtime_dependency 'rspec-expectations', '~> 3.9'
-  #s.add_development_dependency 'byebug', '~> 11.1'
-  s.add_runtime_dependency 'byebug', '~> 11.1'
-  s.add_runtime_dependency 'httparty', '~> 0.18'
+  s.add_development_dependency 'byebug', '~> 11.1'
 end
