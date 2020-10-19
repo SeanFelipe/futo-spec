@@ -1,0 +1,6 @@
+wrapped / long lines
+- what to do with long bullets or descriptions that have a <Cr> for readability ?
+
+state
+- lines starting with "** using setup:" load state for the whole file
+- will need levels of scope for this

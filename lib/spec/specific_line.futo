@@ -1,0 +1,3 @@
+specific line
+- when specific line requested with colon :, only specific line should run
+- if specific line is description not bullet point, all bullets in that case should run

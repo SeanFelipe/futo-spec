@@ -1,0 +1,7 @@
+Here is a description line, no bullets
+- a dash aka a bullet starts a test case
+- lines with nothing should end the test case
+
+Confirming empty lines create a new test case
+- there was an empty line above the description of this test case
+- therefore this should be the *second* test of the suite

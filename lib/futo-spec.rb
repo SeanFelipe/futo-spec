@@ -2,6 +2,8 @@ require 'paint/pa'
 require 'rspec/expectations'
 require 'find'
 require 'rspec'
+require 'byebug'; alias :breakpoint :byebug
+require './logger'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -12,6 +14,17 @@ RSpec.configure do |config|
   end
 end
 
+def logd(msg, color=nil)
+  if ENV.has_key? 'DEBUG'
+    if ENV.fetch('DEBUG') == 'true'
+      unless color
+        puts msg
+      else
+        pa msg, color
+      end
+    end
+  end
+end
 
 class FutoBullet
   attr_accessor :label, :associated_commands
@@ -44,34 +57,43 @@ class FutoSpec
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched
 
-  def initialize(specified_file=nil)
+  def initialize(specified_file=false)
     @cases = Array.new
     @chizu = Array.new
     @unmatched = Array.new
 
     test_case_lines = nil
     unless specified_file
-      test_case_lines = discover_and_process_futo_files
+      test_case_lines = discover_and_process_spec_files
     else
       test_case_lines = process_specific_file(specified_file)
     end
 
     look_for_envrb_and_parse
+    # this creates our map of commands and keys to match the test case descriptions
     find_and_load_chizu_files
+    pa "chizu load complete: #{@chizu}", :gray
+
+    # this creates our test cases and associated bullet points
+    # this will be matched against the chizu
     create_test_cases_and_load_bullet_points(test_case_lines)
-    load_commands_into_test_cases_from_chizu
+
+    #load_commands_into_test_cases_from_chizu
+    match_chizu_entries_against_test_case_bullet_points
   end
 
   def look_for_envrb_and_parse
-    if Dir.children("#{Dir.pwd}/futo-spec").include? '_glue'
-      if Dir.children("#{Dir.pwd}/futo-spec/_glue").include? 'env.rb'
-        puts 'found futo-spec/_glue/env.rb'
-        load 'futo-spec/_glue/env.rb'
+    if Dir.children(Dir.pwd).include? 'spec'
+      if Dir.children("#{Dir.pwd}/spec'").include? '_glue'
+        if Dir.children("#{Dir.pwd}/futo-spec/_glue").include? 'env.rb'
+          puts 'found futo-spec/_glue/env.rb'
+          load 'futo-spec/_glue/env.rb'
+        end
       end
     end
   end
 
-  def discover_and_process_futo_files
+  def discover_and_process_spec_files
     futo_files = []
     test_case_lines = []
 
@@ -131,9 +153,14 @@ class FutoSpec
     return line == ''
   end
 
-  def is_initialize?(line)
-    return line.start_with?('** initialize with:') ||
-      line.start_with?('**')
+  def is_mock_data?(line)
+    return line.start_with?('** mock data:')
+  end
+
+  def load_mock_data(ll)
+    fn = ll.split(' ').last.gsub("'",'').gsub('"','')
+    md = File.readlines(fn, chomp:true)
+    @mock_data = md
   end
 
   def init_test(line)
@@ -158,14 +185,18 @@ class FutoSpec
       l0 = line.gsub('(DONE)','').gsub('(done)','')
       ll = l0.lstrip.rstrip
       if is_newline? ll
+        pa "found newline: #{ll}", :yellow
         add_case_to_spec
         begin_new_case
       else
-        if is_initialize? ll
-          init_test(ll)
+        if is_mock_data? ll
+          pa "found mock data: #{ll}", :yellow
+          load_mock_data(ll)
         elsif is_bullet? ll
+          pa "found bullet: #{ll}", :yellow
           new_bullet(ll)
         else
+          pa "found new description: #{ll}", :yellow
           new_label(ll)
         end
       end
@@ -191,20 +222,27 @@ class FutoSpec
 
   def find_and_load_chizu_files
     chizu_files = []
-
-    Find.find('futo-spec/_glue/chizu/') do |ff|
-      chizu_files << ff if ff.end_with? 'chizu'
-      chizu_files << ff if ff.end_with? 'rb'
+    search_dir = '_glue/chizu'
+    if Dir.children(Dir.pwd).include? 'spec'
+      search_dir = 'spec/' + search_dir
+    end
+    Find.find(search_dir) do |ff|
+      chizu_files << ff if ff.end_with? '.chizu'
+      chizu_files << ff if ff.end_with? '.rb'
     end
 
     chizu_files.each {|ff| load_chizu ff}
+  end
+
+  def add_new_chizu(kkey, commands)
+    @chizu << ChizuEntry.new(kkey, commands)
   end
 
   def load_chizu(ff)
     File.open(ff) do |file|
       lines = file.readlines(chomp:true)
       kkey = ''
-      commands = Array.new
+      associated_commands = Array.new
       lines.each do |ll|
         using_single_quotes = single_quoted_line?(ll)
         if ll.start_with? 'On'
@@ -214,29 +252,28 @@ class FutoSpec
             kkey = ll.split('"')[1]
           end
         elsif ll.start_with? 'end'
-          @chizu << ChizuEntry.new(kkey, commands)
+          add_new_chizu(kkey, associated_commands)
           kkey = ''
-          commands = Array.new
+          associated_commands = Array.new
         elsif ll == "\n" || ll == ''
           next
         else
-          commands << ll.lstrip
+          associated_commands << ll.lstrip
         end
       end
     end
   end
 
   def is_todo?(chizu)
-    if chizu.associated_commands.include?('# TODO') ||
-        chizu.associated_commands.include?('#TODO') ||
-        chizu.associated_commands.include?('TODO')
+    if chizu.associated_commands.include?('TODO')
       return true
     else
       return false
     end
   end
 
-  def load_commands_into_test_cases_from_chizu
+  #def load_commands_into_test_cases_from_chizu
+  def match_chizu_entries_against_test_case_bullet_points
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
@@ -245,16 +282,28 @@ class FutoSpec
           @unmatched << bullet
         else
           @chizu.each do |chizu|
+            logd "processing chizu: #{chizu}", :yellow
             if is_todo? chizu
+              logd "found todo: #{chizu}", :red
               next
             else
+=begin
+              if bullet.label.start_with? 'lines without bullets'
+                breakpoint
+              end
+=end
+              logd "matching bullet with chizu:"
+              logd bullet.label, :blue
+              logd chizu.kkey, :yellow
               if bullet.label == chizu.kkey
                 matched = true
                 bullet.associated_commands = chizu.associated_commands
+                next
               end
             end
           end
           if ! matched
+            pa "couldn't match: #{bullet.label}", :blue
             unless @unmatched.include? bullet
               @unmatched << bullet
             end
@@ -290,7 +339,7 @@ class FutoSpec
         bullet.associated_commands.each do |cmd|
           pa cmd, :cyan if cmd != 'breakpoint'
           begin
-            eval cmd
+            binding = eval(cmd, binding)
           rescue RSpec::Expectations::ExpectationNotMetError => e
             pa e, :red
           end

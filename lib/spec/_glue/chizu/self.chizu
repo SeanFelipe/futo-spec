@@ -1,9 +1,16 @@
 On 'lines with bullets should map as a normal test case' do
   puts "lines with bullets test case"
+  @foo = 'bar'
 end
 
 On 'lines without bullets should map as a test description' do
-  # TODO
+  #puts "@foo: #{@foo}"
+  puts 'before exception'
+  begin
+    (1 + 3).should eq 5
+  rescue Error => e
+    puts "error: #{e}"
+  end
 end
 
 On 'newlines \n should start a new case' do
