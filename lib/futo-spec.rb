@@ -62,24 +62,19 @@ class FutoSpec
     @chizu = Array.new
     @unmatched = Array.new
 
+    look_for_envrb_and_parse
+
+    find_and_load_chizu_files
+
     test_case_lines = nil
     unless specified_file
       test_case_lines = discover_and_process_spec_files
     else
       test_case_lines = process_specific_file(specified_file)
     end
+    create_test_cases(test_case_lines)
 
-    look_for_envrb_and_parse
-    # this creates our map of commands and keys to match the test case descriptions
-    find_and_load_chizu_files
-    pa "chizu load complete: #{@chizu}", :gray
-
-    # this creates our test cases and associated bullet points
-    # this will be matched against the chizu
-    create_test_cases_and_load_bullet_points(test_case_lines)
-
-    #load_commands_into_test_cases_from_chizu
-    match_chizu_entries_against_test_case_bullet_points
+    match_chizus_to_test_cases
   end
 
   def look_for_envrb_and_parse
@@ -178,7 +173,7 @@ class FutoSpec
     return line.start_with?('-') || line.start_with?('>')
   end
 
-  def create_test_cases_and_load_bullet_points(test_case_lines)
+  def create_test_cases(test_case_lines)
     begin_new_case
 
     test_case_lines.each do |line|
@@ -231,34 +226,65 @@ class FutoSpec
       chizu_files << ff if ff.end_with? '.rb'
     end
 
-    chizu_files.each {|ff| load_chizu ff}
+    chizu_files.each {|ff| load_chizu_commands ff}
+    pa "chizu load complete: #{@chizu}", :gray
   end
 
   def add_new_chizu(kkey, commands)
     @chizu << ChizuEntry.new(kkey, commands)
   end
 
-  def load_chizu(ff)
+  def load_chizu_commands(ff)
     File.open(ff) do |file|
       lines = file.readlines(chomp:true)
       kkey = ''
       associated_commands = Array.new
+
+      processing_block = false
+      inside_begin_end = false
+      begin_end_block_string = ''
+
       lines.each do |ll|
-        using_single_quotes = single_quoted_line?(ll)
-        if ll.start_with? 'On'
-          if using_single_quotes
-            kkey = ll.split("'")[1]
+        if processing_block
+          if inside_begin_end
+            puts "processing begin-end command: #{ll}"
+            if ll.lstrip.start_with? 'end'
+              begin_end_block_string += " #{ll.lstrip};"
+              associated_commands << begin_end_block_string
+              begin_end_block_string = ''
+              inside_begin_end = false
+            else
+              begin_end_block_string += " #{ll.lstrip};"
+            end
           else
-            kkey = ll.split('"')[1]
+            if ll.strip.start_with? 'begin'
+              inside_begin_end = true
+              begin_end_block_string += "#{ll.lstrip};"
+            elsif ll.start_with? 'end'
+              processing_block = false
+              add_new_chizu(kkey, associated_commands)
+              kkey = ''
+              associated_commands = Array.new
+            else
+              associated_commands << ll.lstrip
+            end
           end
-        elsif ll.start_with? 'end'
-          add_new_chizu(kkey, associated_commands)
-          kkey = ''
-          associated_commands = Array.new
-        elsif ll == "\n" || ll == ''
-          next
         else
-          associated_commands << ll.lstrip
+          puts "processing description line: #{ll}"
+          if ll.start_with? 'On'
+            processing_block = true
+            using_single_quotes = single_quoted_line?(ll)
+            if using_single_quotes
+              kkey = ll.split("'")[1]
+            else
+              kkey = ll.split('"')[1]
+            end
+          elsif ll == "\n" || ll == ''
+            next
+          else
+            breakpoint
+            puts
+          end
         end
       end
     end
@@ -273,7 +299,7 @@ class FutoSpec
   end
 
   #def load_commands_into_test_cases_from_chizu
-  def match_chizu_entries_against_test_case_bullet_points
+  def match_chizus_to_test_cases
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
