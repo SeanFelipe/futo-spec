@@ -1,12 +1,12 @@
 Gem::Specification.new do |s|
   s.name        = 'futo-spec'
-  s.version     = '0.3.0'
+  s.version     = '0.3.1'
   s.date        = '2020-09-21'
   s.summary     = "Test engine using bullet points. Like you're writing on an envelope."
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
   s.authors     = ["Sean Felipe Wolfe"]
   s.email       = 'sean@addlightness.tech'
-  s.files       = Dir['lib/**/*.rb', 'lib/spec/*.futo', 'lib/spec/**/*.chizu', 'bin/futo']
+  s.files       = Dir['lib/**/*.rb', 'lib/spec/*.futo', 'lib/spec/*.rb', 'lib/spec/**/*.chizu', 'bin/futo']
   s.homepage    = 'https://rubygems.org/gems/futo-spec'
   s.license     = 'MIT'
 
