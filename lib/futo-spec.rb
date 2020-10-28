@@ -3,7 +3,7 @@ require 'rspec/expectations'
 require 'find'
 require 'rspec'
 require 'byebug'; alias :breakpoint :byebug
-require './logger'
+require_relative 'logger'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -217,7 +217,7 @@ class FutoSpec
 
   def find_and_load_chizu_files
     chizu_files = []
-    search_dir = '_glue/chizu'
+    search_dir = 'futo-spec/_glue/chizu'
     if Dir.children(Dir.pwd).include? 'spec'
       search_dir = 'spec/' + search_dir
     end
