@@ -1,9 +1,8 @@
+require 'byebug'; alias :breakpoint :byebug
+require 'find'
 require 'paint/pa'
 require 'rspec/expectations'
-require 'find'
 require 'rspec'
-require 'byebug'; alias :breakpoint :byebug
-require_relative 'logger'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -78,11 +77,11 @@ class FutoSpec
   end
 
   def look_for_envrb_and_parse
-    if Dir.children(Dir.pwd).include? 'spec'
-      if Dir.children("#{Dir.pwd}/spec'").include? '_glue'
-        if Dir.children("#{Dir.pwd}/futo-spec/_glue").include? 'env.rb'
-          puts 'found futo-spec/_glue/env.rb'
-          load 'futo-spec/_glue/env.rb'
+    if Dir.children(Dir.pwd).include? 'futo'
+      if Dir.children("#{Dir.pwd}/futo").include? '_glue'
+        if Dir.children("#{Dir.pwd}/futo/_glue").include? 'env.rb'
+          puts 'found futo/_glue/env.rb'
+          load 'futo/_glue/env.rb'
         end
       end
     end
@@ -92,7 +91,7 @@ class FutoSpec
     futo_files = []
     test_case_lines = []
 
-    Find.find('./futo-spec/') do |ff|
+    Find.find('./futo/') do |ff|
       if ff.end_with? '.futo' or ff.end_with? 'spec'
         futo_files << ff
       end
@@ -217,10 +216,8 @@ class FutoSpec
 
   def find_and_load_chizu_files
     chizu_files = []
-    search_dir = 'futo-spec/_glue/chizu'
-    if Dir.children(Dir.pwd).include? 'spec'
-      search_dir = 'spec/' + search_dir
-    end
+    search_dir = "#{Dir.pwd}/futo/_glue/chizu"
+    #breakpoint
     Find.find(search_dir) do |ff|
       chizu_files << ff if ff.end_with? '.chizu'
       chizu_files << ff if ff.end_with? '.rb'

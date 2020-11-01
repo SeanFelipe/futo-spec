@@ -1,10 +1,6 @@
-#!/usr/bin/env ruby
+#!/usr/bin/env ruby_executeable_hooks
 
 require 'futo-spec'
-if ARGV.include? '--dry-run'
-  $dry_run = true
-  ARGV.delete('--dry-run')
-end
 
-fs = FutoSpec.new(ARGV[1])
-fs.run($dry_run)
+fs = FutoSpec.new
+fs.run

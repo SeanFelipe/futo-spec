@@ -1,0 +1,7 @@
+#!/bin/bash -l
+title run-futo-selftest
+
+#export DEBUG=true
+#ssfuto
+ssfuto basics.futo
+#ssfuto skateboarding.futo

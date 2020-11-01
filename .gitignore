@@ -6,3 +6,4 @@
 .ruby-gemset
 /lib/spec/r
 ssfuto
+*.gem
