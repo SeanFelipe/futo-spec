@@ -4,3 +4,8 @@ wrapped / long lines
 state
 - lines starting with "** using setup:" load state for the whole file
 - will need levels of scope for this
+
+included_in
+- support included_in keyword
+- test bullets can map to previously mapped chizus, rather than repeating code
+- included_in report should show assumed duplicates, to be verified that they're actually still duplicates

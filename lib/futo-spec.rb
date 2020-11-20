@@ -54,31 +54,38 @@ end
 
 class FutoSpec
   include RSpec::Matchers
-  attr_accessor :cases, :chizu, :unmatched
+  attr_accessor :cases, :chizu, :unmatched, :included_ins
 
   def initialize(opts={})
     @cases = Array.new
     @chizu_array = Array.new
     @unmatched = Array.new
+    @included_ins = Array.new
 
     look_for_envrb_and_parse
 
     find_and_load_chizu_files
 
-    if opts.include? :specified_file
-      puts "found specified file: #{opts.fetch(:specified_file)}"
-      specified_file = opts.fetch(:specified_file)
-    end
     if opts.include? :dry
       @dry_run = true if opts[:dry]
     end
 
-    test_case_lines = nil
-    unless specified_file
-      test_case_lines = discover_and_process_spec_files
+    if opts.include? :specified_line
+      puts "line specified: #{opts.fetch(:specified_line)}"
+      specified_line = opts.fetch(:specified_line)
+    elsif opts.include? :specified_file
+      puts "found specified file: #{opts.fetch(:specified_file)}"
+      specified_file = opts.fetch(:specified_file)
+    end
+
+    if specified_line
+      test_case_lines = process_specific_line(specified_line)
+    elsif specified_file
+      test_case_lines = process_specific_file(specified_file)
     else
       test_case_lines = process_specific_file(specified_file)
     end
+
     create_test_cases(test_case_lines)
 
     match_chizus_to_test_cases
@@ -109,27 +116,27 @@ class FutoSpec
     return test_case_lines
   end
 
-  def specific_line_requested(desc)
+  def process_specific_line(desc)
     spl = desc.split(':')
     desc_file = spl.first
-    idx = spl.last.to_i - 1 # line numbers are 1-indexed
+    line_specified = spl.last
+    idx = line_specified.to_i - 1 # line numbers are 1-indexed
 
-    File.open(desc_file) do |file|
+    puts "found specific file request: #{desc_file} at line #{line_specified} (index #{idx})"
+
+    File.open("./futo/#{desc_file}") do |file|
       all_lines = file.readlines(chomp:true)
-      specified_line = all_lines[idx]
-      return specified_line
+      specified_line_as_arr = [ all_lines[idx] ]
+      return specified_line_as_arr
     end
   end
 
   def process_specific_file(fn)
-    if fn.include? ':'
-      return specific_line_requested(spec)
-    else
-      path = "futo/#{fn}"
-      File.open(path) do |file|
-        file_lines = file.readlines(chomp:true)
-        return file_lines
-      end
+    puts "process_specific_file: #{fn}"
+    path = "futo/#{fn}"
+    File.open(path) do |file|
+      file_lines = file.readlines(chomp:true)
+      return file_lines
     end
   end
 
@@ -301,11 +308,11 @@ class FutoSpec
   end
 
   def is_todo?(chizu)
-    if chizu.associated_commands.include?('TODO')
-      return true
-    else
-      return false
-    end
+    return chizu.associated_commands.include?('TODO')
+  end
+
+  def is_included_in?(chizu)
+    return chizu.associated_commands.include?('included_in')
   end
 
   #def load_commands_into_test_cases_from_chizu
@@ -322,7 +329,12 @@ class FutoSpec
             if is_todo? chizu
               logd "found todo: #{chizu}", :red
               next
+            elsif is_included_in? chizu
+              logd "found included_in: #{chizu}", :red
+              @included_ins << chizu
+              next
             else
+
 =begin
               if bullet.label.start_with? 'lines without bullets'
                 breakpoint

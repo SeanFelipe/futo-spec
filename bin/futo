@@ -10,6 +10,8 @@ ARGV.each do |arg|
   elsif arg.end_with? '.futo'
     puts 'specified file'
     opts.store(:specified_file, arg)
+  elsif arg.include? ':'
+    opts.store(:specified_line, arg)
   end
 end
 
