@@ -15,7 +15,7 @@ end
 
 def logd(msg, color=nil)
   if ENV.has_key? 'DEBUG'
-    if ENV.fetch('DEBUG') == 'true'
+    if ENV['DEBUG'].downcase == 'true'
       unless color
         puts msg
       else
@@ -56,14 +56,22 @@ class FutoSpec
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched
 
-  def initialize(specified_file=false)
+  def initialize(opts={})
     @cases = Array.new
-    @chizu = Array.new
+    @chizu_array = Array.new
     @unmatched = Array.new
 
     look_for_envrb_and_parse
 
     find_and_load_chizu_files
+
+    if opts.include? :specified_file
+      puts "found specified file: #{opts.fetch(:specified_file)}"
+      specified_file = opts.fetch(:specified_file)
+    end
+    if opts.include? :dry
+      @dry_run = true if opts[:dry]
+    end
 
     test_case_lines = nil
     unless specified_file
@@ -113,11 +121,12 @@ class FutoSpec
     end
   end
 
-  def process_specific_file(spec)
-    if spec.include? ':'
+  def process_specific_file(fn)
+    if fn.include? ':'
       return specific_line_requested(spec)
     else
-      File.open(spec) do |file|
+      path = "futo/#{fn}"
+      File.open(path) do |file|
         file_lines = file.readlines(chomp:true)
         return file_lines
       end
@@ -224,11 +233,15 @@ class FutoSpec
     end
 
     chizu_files.each {|ff| load_chizu_commands ff}
-    pa "chizu load complete: #{@chizu}", :gray
+    pa "chizu load complete:", :yellow
+    @chizu_array.each do |cc|
+      pa "- #{cc} -", :yellow
+      pa "commands: #{cc.associated_commands}", :yellow
+    end
   end
 
   def add_new_chizu(kkey, commands)
-    @chizu << ChizuEntry.new(kkey, commands)
+    @chizu_array << ChizuEntry.new(kkey, commands)
   end
 
   def load_chizu_commands(ff)
@@ -267,7 +280,7 @@ class FutoSpec
             end
           end
         else
-          puts "processing description line: #{ll}"
+          #puts "processing description line: #{ll}"
           if ll.start_with? 'On'
             processing_block = true
             using_single_quotes = single_quoted_line?(ll)
@@ -300,11 +313,11 @@ class FutoSpec
     @cases.each do |test_case|
       test_case.bullet_points.each do |bullet|
         matched = false
-        if @chizu.length == 0
+        if @chizu_array.length == 0
           # no chizus found, everything will be unmatched
           @unmatched << bullet
         else
-          @chizu.each do |chizu|
+          @chizu_array.each do |chizu|
             logd "processing chizu: #{chizu}", :yellow
             if is_todo? chizu
               logd "found todo: #{chizu}", :red
@@ -348,8 +361,8 @@ class FutoSpec
     end
   end
 
-  def run(dry_run=false)
-    exec_cases unless dry_run
+  def run
+    exec_cases unless @dry_run
     output_unmatched_commands
   end
 

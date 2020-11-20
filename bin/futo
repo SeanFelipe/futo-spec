@@ -1,6 +1,17 @@
 #!/usr/bin/env ruby_executeable_hooks
-
 require 'futo-spec'
 
-fs = FutoSpec.new
+opts = {}
+
+ARGV.each do |arg|
+  if arg == '-d' || arg == '--dry-run'
+    puts 'dry run'
+    opts.store(:dry, true)
+  elsif arg.end_with? '.futo'
+    puts 'specified file'
+    opts.store(:specified_file, arg)
+  end
+end
+
+fs = FutoSpec.new(opts)
 fs.run

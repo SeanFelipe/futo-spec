@@ -1,7 +1,0 @@
-#!/usr/bin/env ruby
-fs = FutoSpec.new(ARGV.first)
-if ARGV[1] == 'headless'
-  fs.run(true)
-else
-  fs.run
-end
