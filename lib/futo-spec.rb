@@ -62,12 +62,12 @@ class FutoSpec
     @unmatched = Array.new
     @included_ins = Array.new
 
-    look_for_envrb_and_parse
-
-    find_and_load_chizu_files
-
     if opts.include? :dry
       @dry_run = true if opts[:dry]
+    end
+
+    if opts.include? :headless
+      $headless = true if opts[:headless]
     end
 
     if opts.include? :specified_line
@@ -77,6 +77,9 @@ class FutoSpec
       puts "found specified file: #{opts.fetch(:specified_file)}"
       specified_file = opts.fetch(:specified_file)
     end
+
+    look_for_envrb_and_parse
+    find_and_load_chizu_files
 
     if specified_line
       test_case_lines = process_specific_line(specified_line)
@@ -233,7 +236,6 @@ class FutoSpec
   def find_and_load_chizu_files
     chizu_files = []
     search_dir = "#{Dir.pwd}/futo/_glue/chizu"
-    #breakpoint
     Find.find(search_dir) do |ff|
       chizu_files << ff if ff.end_with? '.chizu'
       chizu_files << ff if ff.end_with? '.rb'
@@ -312,7 +314,7 @@ class FutoSpec
   end
 
   def is_included_in?(chizu)
-    return chizu.associated_commands.include?('included_in')
+    return chizu.associated_commands.first.include? 'included_in'
   end
 
   #def load_commands_into_test_cases_from_chizu
@@ -332,6 +334,7 @@ class FutoSpec
             elsif is_included_in? chizu
               logd "found included_in: #{chizu}", :red
               @included_ins << chizu
+              matched = true
               next
             else
 
