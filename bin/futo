@@ -5,12 +5,10 @@ opts = {}
 
 ARGV.each do |arg|
   if arg == '-d' || arg == '--dry-run'
-    puts 'dry run'
     opts.store(:dry, true)
   elsif arg == '-h' || arg == '--headless'
     opts.store(:headless, true)
   elsif arg.end_with? '.futo'
-    puts 'specified file'
     opts.store(:specified_file, arg)
   elsif arg.include? ':'
     opts.store(:specified_line, arg)

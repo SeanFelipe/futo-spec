@@ -1,3 +1,8 @@
 specific line
 - when specific line requested with colon :, only specific line should run
 - if specific line is description not bullet point, all bullets in that case should run
+
+specific line and no matching chizu
+- if the specific line is *not* a description, only that line should be matched
+- if the specific line *is* a description, all bullets should output up to the next description
+- if the specific line is mock data ... ??? # TODO

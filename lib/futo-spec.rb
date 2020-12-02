@@ -14,16 +14,15 @@ RSpec.configure do |config|
 end
 
 def logd(msg, color=nil)
-  if ENV.has_key? 'DEBUG'
-    if ENV['DEBUG'].downcase == 'true'
-      unless color
-        puts msg
-      else
-        pa msg, color
-      end
+  if $debug
+    unless color
+      puts msg
+    else
+      pa msg, color
     end
   end
 end
+alias :dpa :logd
 
 class FutoBullet
   attr_accessor :label, :associated_commands
@@ -56,14 +55,25 @@ class FutoSpec
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched, :included_ins
 
+  def check_and_set_debug
+    if ENV.has_key? 'DEBUG'
+      if ENV.fetch('DEBUG') == 'true'
+        $debug = true
+      end
+    end
+  end
+
   def initialize(opts={})
     @cases = Array.new
     @chizu_array = Array.new
     @unmatched = Array.new
     @included_ins = Array.new
 
+    check_and_set_debug
+
     if opts.include? :dry
-      @dry_run = true if opts[:dry]
+      $dry_run = true if opts[:dry]
+      pa 'dry run', :gray
     end
 
     if opts.include? :headless
@@ -83,10 +93,11 @@ class FutoSpec
 
     if specified_line
       test_case_lines = process_specific_line(specified_line)
+      dpa "line specified: #{specified_line} test case lines: #{test_case_lines}", :red
     elsif specified_file
       test_case_lines = process_specific_file(specified_file)
     else
-      test_case_lines = process_specific_file(specified_file)
+      test_case_lines = discover_and_process_spec_files
     end
 
     create_test_cases(test_case_lines)
@@ -98,7 +109,7 @@ class FutoSpec
     if Dir.children(Dir.pwd).include? 'futo'
       if Dir.children("#{Dir.pwd}/futo").include? '_glue'
         if Dir.children("#{Dir.pwd}/futo/_glue").include? 'env.rb'
-          puts 'found futo/_glue/env.rb'
+          dpa 'found futo/_glue/env.rb', :gray
           load 'futo/_glue/env.rb'
         end
       end
@@ -109,14 +120,24 @@ class FutoSpec
     futo_files = []
     test_case_lines = []
 
-    Find.find('./futo/') do |ff|
+    Find.find("#{Dir.pwd}/futo") do |ff|
       if ff.end_with? '.futo' or ff.end_with? 'spec'
-        futo_files << ff
+        fn = ff.split('/').last
+        futo_files << fn
       end
     end
 
-    futo_files.each { |ff| test_case_lines += process_specific_file(ff) }
+    futo_files.each { |fn| test_case_lines += process_specific_file(fn) }
     return test_case_lines
+  end
+
+  def process_specific_file(fn)
+    dpa "process_specific_file: #{fn}", :gray
+    path = "futo/#{fn}"
+    File.open(path) do |file|
+      file_lines = file.readlines(chomp:true)
+      return file_lines
+    end
   end
 
   def process_specific_line(desc)
@@ -129,18 +150,31 @@ class FutoSpec
 
     File.open("./futo/#{desc_file}") do |file|
       all_lines = file.readlines(chomp:true)
-      specified_line_as_arr = [ all_lines[idx] ]
-      return specified_line_as_arr
+      specified_line = all_lines[idx]
+      if is_description? specified_line
+        return add_additional_lines_context_to_specified_line(all_lines, idx)
+      else
+        specified_line_as_arr = [ specified_line ]
+        return specified_line_as_arr
+      end
     end
   end
 
-  def process_specific_file(fn)
-    puts "process_specific_file: #{fn}"
-    path = "futo/#{fn}"
-    File.open(path) do |file|
-      file_lines = file.readlines(chomp:true)
-      return file_lines
+  def add_additional_lines_context_to_specified_line(all_lines, idx)
+    starting_slice = all_lines.slice(idx, all_lines.length)
+    final_idx = nil
+    starting_slice.each_with_index do |ll, ii|
+      if is_newline? ll
+        final_idx = ii
+        break
+      end
+      if final_idx == nil
+        # no newline found through the rest of the futo
+        final_idx = all_lines.length
+      end
     end
+    final_slice = starting_slice.slice(idx, final_idx)
+    return final_slice
   end
 
   def add_case_to_spec
@@ -160,6 +194,17 @@ class FutoSpec
 
   def new_label(line)
     @new_case_label = line
+  end
+
+  def is_description?(line)
+    return false if is_bullet? line
+    return false if is_newline? line
+    return false if is_mock_data? line
+    return true
+  end
+
+  def is_bullet?(line)
+    return line.start_with?('-') || line.start_with?('>')
   end
 
   def is_newline?(line)
@@ -187,10 +232,6 @@ class FutoSpec
     puts
   end
 
-  def is_bullet?(line)
-    return line.start_with?('-') || line.start_with?('>')
-  end
-
   def create_test_cases(test_case_lines)
     begin_new_case
 
@@ -198,19 +239,21 @@ class FutoSpec
       l0 = line.gsub('(DONE)','').gsub('(done)','')
       ll = l0.lstrip.rstrip
       if is_newline? ll
-        pa "found newline: #{ll}", :yellow
+        dpa "found newline: #{ll}", :yellow
         add_case_to_spec
         begin_new_case
       else
         if is_mock_data? ll
-          pa "found mock data: #{ll}", :yellow
+          dpa "found mock data: #{ll}", :yellow
           load_mock_data(ll)
         elsif is_bullet? ll
-          pa "found bullet: #{ll}", :yellow
+          dpa "found bullet: #{ll}", :yellow
           new_bullet(ll)
-        else
-          pa "found new description: #{ll}", :yellow
+        elsif is_description? ll
+          dpa "found new description: #{ll}", :yellow
           new_label(ll)
+        else
+          raise RuntimeError, "could not find entry type for string #{ll}"
         end
       end
     end
@@ -242,10 +285,10 @@ class FutoSpec
     end
 
     chizu_files.each {|ff| load_chizu_commands ff}
-    pa "chizu load complete:", :yellow
+    dpa "chizu load complete, files below:", :yellow
     @chizu_array.each do |cc|
-      pa "- #{cc} -", :yellow
-      pa "commands: #{cc.associated_commands}", :yellow
+      dpa "- #{cc} -", :yellow
+      dpa "commands: #{cc.associated_commands}", :yellow
     end
   end
 
@@ -377,7 +420,7 @@ class FutoSpec
   end
 
   def run
-    exec_cases unless @dry_run
+    exec_cases unless $dry_run
     output_unmatched_commands
   end
 
