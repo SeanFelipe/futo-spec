@@ -1,6 +1,6 @@
 Gem::Specification.new do |s|
   s.name        = 'futo-spec'
-  s.version     = '0.3.8'
+  s.version     = '0.3.9'
   s.date        = '2020-09-21'
   s.summary     = "Test engine using bullet points. Like you're writing on an envelope."
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
@@ -18,11 +18,7 @@ Gem::Specification.new do |s|
   s.executables << 'futo'
 
   s.add_runtime_dependency 'paint', '~> 2.2'
-  #s.add_runtime_dependency 'apparition', '~> 0.6'
-  s.add_runtime_dependency 'selenium-webdriver', '~> 3.1'
-  s.add_runtime_dependency 'webdrivers', '~> 4.4'
-  s.add_runtime_dependency 'capybara', '~> 3.33'
-  s.add_runtime_dependency 'rspec', '~> 3.9'
-  s.add_runtime_dependency 'rspec-expectations', '~> 3.9'
+  s.add_development_dependency 'rspec', '~> 3.9'
+  s.add_development_dependency 'rspec-expectations', '~> 3.9'
   s.add_development_dependency 'byebug', '~> 11.1'
 end
