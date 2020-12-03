@@ -12,6 +12,9 @@ ARGV.each do |arg|
     opts.store(:specified_file, arg)
   elsif arg.include? ':'
     opts.store(:specified_line, arg)
+  elsif not arg.start_with? '-'
+    # support passing a file name without having to type .futo
+    opts.store(:specified_file, "#{arg}.futo")
   end
 end
 

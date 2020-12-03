@@ -13,12 +13,16 @@ RSpec.configure do |config|
   end
 end
 
-def logd(msg, color=nil)
+def logd(msg, *colors)
   if $debug
-    unless color
+    unless colors
       puts msg
     else
-      pa msg, color
+      if colors.first == :bb
+        pa msg, :yellow, :bright
+      else
+        pa msg, *colors
+      end
     end
   end
 end
@@ -101,6 +105,7 @@ class FutoSpec
     end
 
     create_test_cases(test_case_lines)
+    dpa "test cases loaded: #{@cases.length}", :bb
 
     match_chizus_to_test_cases
   end
@@ -117,6 +122,7 @@ class FutoSpec
   end
 
   def discover_and_process_spec_files
+    dpa "no file specified, discovering all .futo or .spec files ...", :yellow, :bright
     futo_files = []
     test_case_lines = []
 
@@ -132,7 +138,7 @@ class FutoSpec
   end
 
   def process_specific_file(fn)
-    dpa "process_specific_file: #{fn}", :gray
+    dpa "process_specific_file: #{fn}", :yellow
     path = "futo/#{fn}"
     File.open(path) do |file|
       file_lines = file.readlines(chomp:true)
@@ -284,6 +290,7 @@ class FutoSpec
       chizu_files << ff if ff.end_with? '.rb'
     end
 
+    dpa "loading chizu ...", :yellow, :bright
     chizu_files.each {|ff| load_chizu_commands ff}
     dpa "chizu load complete, files below:", :yellow
     @chizu_array.each do |cc|
@@ -362,43 +369,24 @@ class FutoSpec
 
   #def load_commands_into_test_cases_from_chizu
   def match_chizus_to_test_cases
-    @cases.each do |test_case|
-      test_case.bullet_points.each do |bullet|
-        matched = false
-        if @chizu_array.length == 0
-          # no chizus found, everything will be unmatched
-          @unmatched << bullet
-        else
+    if @chizu_array.length == 0
+      set_all_unmatched
+    else
+      @cases.each_with_index do |test_case, tc_index|
+        test_case.bullet_points.each do |bullet|
+          dpa "matching bullet: #{bullet}", :bb
+          matched = false
           @chizu_array.each do |chizu|
-            logd "processing chizu: #{chizu}", :yellow
-            if is_todo? chizu
-              logd "found todo: #{chizu}", :red
-              next
-            elsif is_included_in? chizu
-              logd "found included_in: #{chizu}", :red
-              @included_ins << chizu
+            if process_bullet_chizu_match(bullet, chizu)
+              bullet.associated_commands = chizu.associated_commands
               matched = true
-              next
-            else
-
-=begin
-              if bullet.label.start_with? 'lines without bullets'
-                breakpoint
-              end
-=end
-              logd "matching bullet with chizu:"
-              logd bullet.label, :blue
-              logd chizu.kkey, :yellow
-              if bullet.label == chizu.kkey
-                matched = true
-                bullet.associated_commands = chizu.associated_commands
-                next
-              end
+              break
             end
           end
+          dpa "matched? #{bullet.label} : #{matched}", :bb
           if ! matched
-            pa "couldn't match: #{bullet.label}", :blue
             unless @unmatched.include? bullet
+              dpa "couldn't find a match for #{bullet.label}", :red
               @unmatched << bullet
             end
           end
@@ -406,6 +394,36 @@ class FutoSpec
       end
     end
   end
+
+  def process_bullet_chizu_match(bullet, chizu)
+    matched = false
+    dpa "chizu: #{chizu.kkey}", :yellow
+    if is_todo? chizu
+      #logd "found todo: #{chizu}", :yellow
+      # todos aren't considered completed so they are unmatched
+    elsif is_included_in? chizu
+      #logd "found included_in: #{chizu}", :yellow
+      @included_ins << chizu
+    else
+      if bullet.label == chizu.kkey
+        logd "matched: #{bullet.label} #{chizu.kkey}", :blue
+        matched = true
+      end
+    end
+    return matched
+  end
+
+=begin
+          if matched
+            pa "matched bullet: #{bullet} chizu: #{chizu}", :yellow, :bright
+          else
+            pa "couldn't match: #{bullet.label}", :blue
+          end
+        end
+      end
+    end
+  end
+=end
 
   def output_unmatched_commands
     puts

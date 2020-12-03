@@ -1,3 +1,17 @@
+request a specific file
+- should process this file only
+
+request a file which doesn't exist
+- should error gracefully
+
+request a specific file which an extension other than .futo or .spec
+- should error gracefully
+
+request a specific file with no extension specified
+- should look for a file with a .futo extension
+--> if found, should process this file
+--> if not found, should error gracefully
+
 specific line
 - when specific line requested with colon :, only specific line should run
 - if specific line is description not bullet point, all bullets in that case should run
