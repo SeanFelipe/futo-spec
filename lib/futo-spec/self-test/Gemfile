@@ -1,0 +1,6 @@
+source 'https://rubygems.org'
+
+gem 'futo-spec', path: '../../../'
+gem 'byebug'
+gem 'rspec'
+gem 'rspec-expectations'

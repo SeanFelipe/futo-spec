@@ -222,8 +222,11 @@ class FutoSpec
   end
 
   def load_mock_data(ll)
+    # ll is the full line including '** mock data:'
     fn = ll.split(' ').last.gsub("'",'').gsub('"','')
-    md = File.readlines(fn, chomp:true)
+    # now we have the filename minus futo/
+    path = "futo/#{fn}"
+    md = File.readlines(path, chomp:true)
     @mock_data = md
   end
 
@@ -385,9 +388,9 @@ class FutoSpec
           end
           dpa "matched? #{bullet.label} : #{matched}", :bb
           if ! matched
-            unless @unmatched.include? bullet
+            unless @unmatched.include? bullet.label
               dpa "couldn't find a match for #{bullet.label}", :red
-              @unmatched << bullet
+              @unmatched << bullet.label
             end
           end
         end
@@ -429,8 +432,8 @@ class FutoSpec
     puts
     pa "Missing chizu entries:", :yellow
     puts
-    @unmatched.each do |un|
-      pa "On '#{un.label}' do", :yellow
+    @unmatched.each do |label|
+      pa "On '#{label}' do", :yellow
       pa '  # TODO', :yellow
       pa 'end', :yellow
       puts

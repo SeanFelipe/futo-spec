@@ -3,9 +3,3 @@ basic mapping
 - lines with bullets should map as a normal test case
 - lines without bullets should map as a test description
 - newlines \n should start a new case
-
-
-set a tee time
-- set a new tee time for an available time
---> should see new tee time in calendar
---> should receive confirmation toast

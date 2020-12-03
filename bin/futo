@@ -1,11 +1,15 @@
 #!/usr/bin/env ruby_executeable_hooks
 require 'futo-spec'
 
+output_version_only = false
 opts = {}
 
 ARGV.each do |arg|
   if arg == '-d' || arg == '--dry-run'
     opts.store(:dry, true)
+  elsif arg == '-v' || arg == '--version'
+    output_version_only = true
+    puts Gem.loaded_specs['futo-spec'].version
   elsif arg == '-h' || arg == '--headless'
     opts.store(:headless, true)
   elsif arg.end_with? '.futo'
@@ -18,5 +22,7 @@ ARGV.each do |arg|
   end
 end
 
-fs = FutoSpec.new(opts)
-fs.run
+unless output_version_only
+  fs = FutoSpec.new(opts)
+  fs.run
+end
