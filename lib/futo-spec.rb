@@ -370,6 +370,12 @@ class FutoSpec
     return chizu.associated_commands.first.include? 'included_in'
   end
 
+  def set_all_unmatched
+    @cases.each do |cc|
+      cc.bullet_points.each {|bullet| @unmatched << bullet.label }
+    end
+  end
+
   #def load_commands_into_test_cases_from_chizu
   def match_chizus_to_test_cases
     if @chizu_array.length == 0
