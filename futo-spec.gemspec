@@ -18,7 +18,7 @@ Gem::Specification.new do |s|
   s.executables << 'futo'
 
   s.add_runtime_dependency 'paint', '~> 2.2'
-  s.add_development_dependency 'rspec', '~> 3.9'
-  s.add_development_dependency 'rspec-expectations', '~> 3.9'
+  s.add_runtime_dependency 'rspec', '~> 3.9'
+  s.add_runtime_dependency 'rspec-expectations', '~> 3.9'
   s.add_development_dependency 'byebug', '~> 11.1'
 end
