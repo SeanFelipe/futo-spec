@@ -149,6 +149,8 @@ class FutoSpec
   def process_specific_line(desc)
     spl = desc.split(':')
     desc_file = spl.first
+    # allow for specifying line w/o .futo, eg `futo current:19 for current.futo:19`
+    desc_file = "#{desc_file}.futo" if not desc_file.include? '.'
     line_specified = spl.last
     idx = line_specified.to_i - 1 # line numbers are 1-indexed
 
@@ -176,10 +178,10 @@ class FutoSpec
       end
       if final_idx == nil
         # no newline found through the rest of the futo
-        final_idx = all_lines.length
+        final_idx = starting_slice.length
       end
     end
-    final_slice = starting_slice.slice(idx, final_idx)
+    final_slice = starting_slice.slice(0, final_idx)
     return final_slice
   end
 
@@ -287,7 +289,7 @@ class FutoSpec
 
   def find_and_load_chizu_files
     chizu_files = []
-    search_dir = "#{Dir.pwd}/futo/_glue/chizu"
+    search_dir = "#{Dir.pwd}/futo/chizus"
     Find.find(search_dir) do |ff|
       chizu_files << ff if ff.end_with? '.chizu'
       chizu_files << ff if ff.end_with? '.rb'
@@ -312,28 +314,28 @@ class FutoSpec
       kkey = ''
       associated_commands = Array.new
 
-      processing_block = false
-      inside_begin_end = false
+      processing_stanza = false
+      inside_begin_end_block = false
       begin_end_block_string = ''
 
       lines.each do |ll|
-        if processing_block
-          if inside_begin_end
+        if processing_stanza
+          if inside_begin_end_block
             puts "processing begin-end command: #{ll}"
             if ll.lstrip.start_with? 'end'
               begin_end_block_string += " #{ll.lstrip};"
               associated_commands << begin_end_block_string
               begin_end_block_string = ''
-              inside_begin_end = false
+              inside_begin_end_block = false
             else
               begin_end_block_string += " #{ll.lstrip};"
             end
           else
             if ll.strip.start_with? 'begin'
-              inside_begin_end = true
+              inside_begin_end_block= true
               begin_end_block_string += "#{ll.lstrip};"
             elsif ll.start_with? 'end'
-              processing_block = false
+              processing_stanza = false
               add_new_chizu(kkey, associated_commands)
               kkey = ''
               associated_commands = Array.new
@@ -344,7 +346,7 @@ class FutoSpec
         else
           #puts "processing description line: #{ll}"
           if ll.start_with? 'On'
-            processing_block = true
+            processing_stanza = true
             using_single_quotes = single_quoted_line?(ll)
             if using_single_quotes
               kkey = ll.split("'")[1]
