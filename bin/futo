@@ -1,8 +1,14 @@
 #!/usr/bin/env ruby_executeable_hooks
+require 'fileutils'
 require 'futo-spec'
 
 output_version_only = false
 opts = {}
+
+def futo_init_directories
+  FileUtils.mkdir_p("#{Dir.pwd}/futo/chizus")
+  FileUtils.mkdir("#{Dir.pwd}/futo/_glue")
+end
 
 ARGV.each do |arg|
   if arg == '-d' || arg == '--dry-run'
@@ -10,6 +16,8 @@ ARGV.each do |arg|
   elsif arg == '-v' || arg == '--version'
     output_version_only = true
     puts Gem.loaded_specs['futo-spec'].version
+  elsif arg == '--init'
+    futo_init_directories
   elsif arg == '-h' || arg == '--headless'
     opts.store(:headless, true)
   elsif arg.end_with? '.futo'
