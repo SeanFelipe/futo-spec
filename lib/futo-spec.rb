@@ -450,7 +450,7 @@ class FutoSpec
 
   def run
     exec_cases unless $dry_run
-    output_unmatched_commands
+    output_unmatched_commands if @unmatched.length > 0
   end
 
   def exec_cases
