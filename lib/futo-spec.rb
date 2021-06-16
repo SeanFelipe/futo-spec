@@ -88,7 +88,7 @@ class FutoSpec
       puts "line specified: #{opts.fetch(:specified_line)}"
       specified_line = opts.fetch(:specified_line)
     elsif opts.include? :specified_file
-      puts "found specified file: #{opts.fetch(:specified_file)}"
+      puts "specific file requested: #{opts.fetch(:specified_file)}"
       specified_file = opts.fetch(:specified_file)
     end
 
