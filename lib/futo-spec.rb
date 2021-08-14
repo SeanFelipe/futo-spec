@@ -38,6 +38,11 @@ class FutoBullet
 end
 
 class FutoCase
+  ##
+  # A test case, with a description and associated bullet points.
+  # The description won't actually execute code.
+  # The associated bullet points will be mapped to ruby commands via "Chizus".
+  # Bullets will in sequence until a newline is encountered.
   attr_accessor :description, :bullet_points
   def initialize(h, b_arr)
     @description = h
@@ -47,6 +52,10 @@ class FutoCase
 end
 
 class ChizuEntry
+  ##
+  # "Chizu" is Japanese for "map".
+  # Chizus map bullet point text to specific ruby commands which will be executed.
+  # Analagous to Cucumber's "step definition" layer.
   attr_accessor :kkey, :associated_commands
   def initialize(h, c_arr)
     @kkey = h
@@ -56,6 +65,9 @@ class ChizuEntry
 end
 
 class FutoSpec
+  ##
+  # A collection of test cases, "FutoCase", and execution mappings, "Chizus".
+  # Collect test definitions, then match them to chizus and run the associated commands.
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched, :included_ins
 
@@ -424,18 +436,6 @@ class FutoSpec
     return matched
   end
 
-=begin
-          if matched
-            pa "matched bullet: #{bullet} chizu: #{chizu}", :yellow, :bright
-          else
-            pa "couldn't match: #{bullet.label}", :blue
-          end
-        end
-      end
-    end
-  end
-=end
-
   def output_unmatched_commands
     puts
     pa "Missing chizu entries:", :yellow
@@ -453,20 +453,23 @@ class FutoSpec
     output_unmatched_commands if @unmatched.length > 0
   end
 
+  def run_commands_in_block_context(bullet)
+    bullet.associated_commands.each do |cmd|
+      pa cmd, :cyan if cmd != 'breakpoint'
+      begin
+        binding = eval(cmd, binding)
+      rescue RSpec::Expectations::ExpectationNotMetError => e
+        pa e, :red
+      end
+    end
+  end
+
   def exec_cases
     puts
     @cases.each do |test_case|
+      pa "case: #{test_case.description}", :gray
       test_case.bullet_points.each do |bullet|
-        #puts
-        pa "case: #{bullet.label}", :gray
-        bullet.associated_commands.each do |cmd|
-          pa cmd, :cyan if cmd != 'breakpoint'
-          begin
-            binding = eval(cmd, binding)
-          rescue RSpec::Expectations::ExpectationNotMetError => e
-            pa e, :red
-          end
-        end
+        run_commands_in_block_context(bullet)
       end
     end
   end
