@@ -220,7 +220,12 @@ class FutoSpec
     return false if is_bullet? line
     return false if is_newline? line
     return false if is_mock_data? line
+    return false if is_asterisk? line
     return true
+  end
+
+  def is_asterisk?(line)
+    return line.start_with?('*')
   end
 
   def is_bullet?(line)
@@ -272,6 +277,10 @@ class FutoSpec
         elsif is_bullet? ll
           dpa "found bullet: #{ll}", :yellow
           new_bullet(ll)
+        elsif is_asterisk? ll
+          dpa "found asterisk, treating as description: #{ll}", :yellow
+          label = ll.gsub('*', '').lstrip
+          new_label(label)
         elsif is_description? ll
           dpa "found new description: #{ll}", :yellow
           new_label(ll)
