@@ -3,6 +3,7 @@ require 'find'
 require 'paint/pa'
 require 'rspec/expectations'
 require 'rspec'
+require_relative './markdown_generator'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -92,6 +93,11 @@ class FutoSpec
       pa 'dry run', :gray
     end
 
+    if opts.include? :markdown
+      $markdown = true if opts[:markdown]
+      pa 'markdown mode', :gray, :bright
+    end
+
     if opts.include? :headless
       $headless = true if opts[:headless]
     end
@@ -104,22 +110,32 @@ class FutoSpec
       specified_file = opts.fetch(:specified_file)
     end
 
-    look_for_envrb_and_parse
-    find_and_load_chizu_files
-
-    if specified_line
-      test_case_lines = process_specific_line(specified_line)
-      dpa "line specified: #{specified_line} test case lines: #{test_case_lines}", :red
-    elsif specified_file
-      test_case_lines = process_specific_file(specified_file)
+    if $markdown
+      unless specified_file
+        raise ArgumentError, "please specify a file when using --markdown option."
+      else
+        test_case_lines = process_specific_file(specified_file)
+        generate_markdown_and_print(test_case_lines)
+        pa 'finished markdown.', :gray, :bright
+      end
     else
-      test_case_lines = discover_and_process_spec_files
+      look_for_envrb_and_parse
+      find_and_load_chizu_files
+
+      if specified_line
+        test_case_lines = process_specific_line(specified_line)
+        dpa "line specified: #{specified_line} test case lines: #{test_case_lines}", :red
+      elsif specified_file
+        test_case_lines = process_specific_file(specified_file)
+      else
+        test_case_lines = discover_and_process_spec_files
+      end
+
+      create_test_cases(test_case_lines)
+      dpa "test cases loaded: #{@cases.length}", :bb
+
+      match_chizus_to_test_cases
     end
-
-    create_test_cases(test_case_lines)
-    dpa "test cases loaded: #{@cases.length}", :bb
-
-    match_chizus_to_test_cases
   end
 
   def look_for_envrb_and_parse

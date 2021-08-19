@@ -1,0 +1,6 @@
+request --markdown but don't specify file
+--> should raise error
+
+markdown on properly formatted file
+--> get well-formatted markdown
+--> includes header
