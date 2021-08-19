@@ -13,6 +13,8 @@ end
 ARGV.each do |arg|
   if arg == '-d' || arg == '--dry-run'
     opts.store(:dry, true)
+  elsif arg == '-md' || arg == '--markdown'
+    opts.store(:markdown, true)
   elsif arg == '-v' || arg == '--version'
     output_version_only = true
     puts Gem.loaded_specs['futo-spec'].version
@@ -20,6 +22,8 @@ ARGV.each do |arg|
     futo_init_directories
   elsif arg == '-h' || arg == '--headless'
     opts.store(:headless, true)
+  elsif arg == '-v' || arg == '--version'
+    output_version_only = true
   elsif arg.end_with? '.futo'
     opts.store(:specified_file, arg)
   elsif arg.include? ':'
