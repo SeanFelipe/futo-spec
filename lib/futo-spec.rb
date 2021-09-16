@@ -90,12 +90,12 @@ class FutoSpec
 
     if opts.include? :dry
       $dry_run = true if opts[:dry]
-      pa 'dry run', :gray
+      pa 'dry run', :yellow, :bright
     end
 
     if opts.include? :markdown
       $markdown = true if opts[:markdown]
-      pa 'markdown mode', :gray, :bright
+      pa 'markdown mode', :yellow, :bright
     end
 
     if opts.include? :headless
@@ -116,7 +116,7 @@ class FutoSpec
       else
         test_case_lines = process_specific_file(specified_file)
         generate_markdown_and_print(test_case_lines)
-        pa 'finished markdown.', :gray, :bright
+        pa 'finished markdown.', :yellow
       end
     else
       look_for_envrb_and_parse
@@ -166,7 +166,7 @@ class FutoSpec
   end
 
   def process_specific_file(fn)
-    dpa "process_specific_file: #{fn}", :yellow
+    dpa "process_specific_file: #{fn}", :yellow, :bright
     path = "futo/#{fn}"
     File.open(path) do |file|
       file_lines = file.readlines(chomp:true)
@@ -454,7 +454,7 @@ class FutoSpec
       @included_ins << chizu
     else
       if bullet.label == chizu.kkey
-        logd "matched: #{bullet.label} #{chizu.kkey}", :blue
+        logd "matched: #{bullet.label} #{chizu.kkey}", :cyan
         matched = true
       end
     end
@@ -463,7 +463,7 @@ class FutoSpec
 
   def output_unmatched_commands
     puts
-    pa "Missing chizu entries:", :yellow
+    pa "Missing chizu entries:", :yellow, :bright
     puts
     @unmatched.each do |label|
       pa "On '#{label}' do", :yellow
@@ -484,7 +484,7 @@ class FutoSpec
       begin
         binding = eval(cmd, binding)
       rescue RSpec::Expectations::ExpectationNotMetError => e
-        pa e, :red
+        pa e, :red, :bright
       end
     end
   end
@@ -492,7 +492,7 @@ class FutoSpec
   def exec_cases
     puts
     @cases.each do |test_case|
-      pa "case: #{test_case.description}", :gray
+      pa "case: #{test_case.description}", :cyan, :bright
       test_case.bullet_points.each do |bullet|
         run_commands_in_block_context(bullet)
       end
