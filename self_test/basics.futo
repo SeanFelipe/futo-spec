@@ -1,0 +1,12 @@
+# 25Oct2021 we are restricting .chizu files to only matching fn's, + chizus/shared directory
+confirm only exact filenames are slurped up + shared directory
+
+* run specific file with multiple chizus but nothing in the shared directory
+--> only the chizu which matches the specified file is matched
+
+* run all tests with multiple chizus but nothing shared
+--> each futo matches to only one chizu
+
+* run all tests with multiple chizus and shared chizus
+--> each futo matches to only one chizu
+--> shared chizus are also included

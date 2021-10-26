@@ -8,6 +8,16 @@ require_relative './markdown_generator'
 
 BULLET_POINTS_REGEX = /[\->]*/
 
+COLORS = {
+  init:     :gray,
+  setup:    :gray,
+  log:      :yellow,
+  exec:     :yellow,
+  support:  :cyan,
+  warning:  :yellow,
+  error:    :red,
+}
+
 RSpec.configure do |config|
   config.expect_with :rspec do |c|
     c.syntax = :should
@@ -82,6 +92,7 @@ class FutoSpec
 
   def initialize(opts={})
     @cases = Array.new
+    @chizu_files = Array.new
     @chizu_array = Array.new
     @unmatched = Array.new
     @included_ins = Array.new
@@ -90,51 +101,36 @@ class FutoSpec
 
     if opts.include? :dry
       $dry_run = true if opts[:dry]
-      pa 'dry run', :yellow, :bright
+      pa 'dry run', COLORS[:init], :bright
     end
 
     if opts.include? :markdown
       $markdown = true if opts[:markdown]
-      pa 'markdown mode', :yellow, :bright
+      pa 'markdown mode', COLORS[:init], :bright
     end
 
     if opts.include? :headless
       $headless = true if opts[:headless]
     end
 
-    if opts.include? :specified_line
-      puts "line specified: #{opts.fetch(:specified_line)}"
-      specified_line = opts.fetch(:specified_line)
-    elsif opts.include? :specified_file
-      puts "specific file requested: #{opts.fetch(:specified_file)}"
-      specified_file = opts.fetch(:specified_file)
-    end
+    @specified_file = opts.fetch(:specified_file)
 
     if $markdown
-      unless specified_file
+      unless @specified_file
         raise ArgumentError, "please specify a file when using --markdown option."
       else
-        test_case_lines = process_specific_file(specified_file)
+        test_case_lines = process_specific_file(@specified_file)
         generate_markdown_and_print(test_case_lines)
-        pa 'finished markdown.', :yellow
+        pa 'finished markdown.', COLORS[:init]
       end
     else
       look_for_envrb_and_parse
-      find_and_load_chizu_files
 
-      if specified_line
-        test_case_lines = process_specific_line(specified_line)
-        dpa "line specified: #{specified_line} test case lines: #{test_case_lines}", :red
-      elsif specified_file
-        test_case_lines = process_specific_file(specified_file)
-      else
-        test_case_lines = discover_and_process_spec_files
-      end
-
+      test_case_lines = process_specific_file(@specified_file)
       create_test_cases(test_case_lines)
       dpa "test cases loaded: #{@cases.length}", :bb
 
-      match_chizus_to_test_cases
+      load_matching_chizu_plus_shared_directory
     end
   end
 
@@ -142,7 +138,7 @@ class FutoSpec
     if Dir.children(Dir.pwd).include? 'futo'
       if Dir.children("#{Dir.pwd}/futo").include? '_glue'
         if Dir.children("#{Dir.pwd}/futo/_glue").include? 'env.rb'
-          dpa 'found futo/_glue/env.rb', :gray
+          dpa 'found futo/_glue/env.rb', COLORS[:init]
           load 'futo/_glue/env.rb'
         end
       end
@@ -150,7 +146,7 @@ class FutoSpec
   end
 
   def discover_and_process_spec_files
-    dpa "no file specified, discovering all .futo or .spec files ...", :yellow, :bright
+    dpa "no file specified, discovering all .futo or .spec files ...", COLORS[:init], :bright
     futo_files = []
     test_case_lines = []
 
@@ -166,7 +162,7 @@ class FutoSpec
   end
 
   def process_specific_file(fn)
-    dpa "process_specific_file: #{fn}", :yellow, :bright
+    dpa "process_specific_file: #{fn}", COLORS[:init], :bright
     path = "futo/#{fn}"
     File.open(path) do |file|
       file_lines = file.readlines(chomp:true)
@@ -271,7 +267,7 @@ class FutoSpec
     if File.exist?(fn)
       load(fn)
     else
-      pa "failed to find setup file #{fn} for line: #{line}", :red
+      pa "failed to find setup file #{fn} for line: #{line}", COLORS[:red]
     end
     puts
   end
@@ -283,22 +279,22 @@ class FutoSpec
       l0 = line.gsub('(DONE)','').gsub('(done)','')
       ll = l0.lstrip.rstrip
       if is_newline? ll
-        dpa "found newline: #{ll}", :yellow
+        dpa "found newline: #{ll}", COLORS[:setup]
         add_case_to_spec
         begin_new_case
       else
         if is_mock_data? ll
-          dpa "found mock data: #{ll}", :yellow
+          dpa "found mock data: #{ll}", COLORS[:setup]
           load_mock_data(ll)
         elsif is_bullet? ll
-          dpa "found bullet: #{ll}", :yellow
+          dpa "found bullet: #{ll}", COLORS[:setup]
           new_bullet(ll)
         elsif is_asterisk? ll
-          dpa "found asterisk, treating as description: #{ll}", :yellow
+          dpa "found asterisk, treating as description: #{ll}", COLORS[:setup]
           label = ll.gsub('*', '').lstrip
           new_label(label)
         elsif is_description? ll
-          dpa "found new description: #{ll}", :yellow
+          dpa "found new description: #{ll}", COLORS[:setup]
           new_label(ll)
         else
           raise RuntimeError, "could not find entry type for string #{ll}"
@@ -324,22 +320,29 @@ class FutoSpec
     return single
   end
 
-  def find_and_load_chizu_files
+  def find_chizu_with_matching_fn
+  end
+
+  def load_matching_chizu_plus_shared_directory
+    base = "#{Dir.pwd}/futo/chizus"
+    path = "#{base}/#{@specified_file}.chizu"
     chizu_files = []
-    search_dir = "#{Dir.pwd}/futo/chizus"
+    unless File.exist? path
+      raise RuntimeError, "couldn't find matching chizu for #{@specified_file}"
+    else
+      dpa "loading matching #{@specified_file}.chizu ...", COLORS[:setup], :bright
+      chizu_files << path
+    end
+    search_dir = "#{base}/shared"
+    dpa "loading shared chizus ...", COLORS[:setup], :bright
     Find.find(search_dir) do |ff|
+      dpa "loading #{ff}", :cyan
       chizu_files << ff if ff.end_with? '.chizu'
-      chizu_files << ff if ff.end_with? '.rb'
     end
 
-    dpa "loading chizu ...", :yellow, :bright
     chizu_files.each {|ff| load_chizu_commands ff}
-    dpa "chizu load complete, files below:", :yellow
-    @chizu_array.each do |cc|
-      dpa "- #{cc} -", :yellow
-      dpa "commands: #{cc.associated_commands}", :yellow
-    end
   end
+
 
   def add_new_chizu(kkey, commands)
     @chizu_array << ChizuEntry.new(kkey, commands)
@@ -393,8 +396,7 @@ class FutoSpec
           elsif ll == "\n" || ll == ''
             next
           else
-            breakpoint
-            puts
+            pa "encountered unexpected line: #{ll}", :red, :bright
           end
         end
       end
@@ -415,7 +417,6 @@ class FutoSpec
     end
   end
 
-  #def load_commands_into_test_cases_from_chizu
   def match_chizus_to_test_cases
     if @chizu_array.length == 0
       set_all_unmatched
@@ -434,7 +435,7 @@ class FutoSpec
           dpa "matched? #{bullet.label} : #{matched}", :bb
           if ! matched
             unless @unmatched.include? bullet.label
-              dpa "couldn't find a match for #{bullet.label}", :red
+              dpa "couldn't find a match for #{bullet.label}", COLORS[:error]
               @unmatched << bullet.label
             end
           end
@@ -445,16 +446,16 @@ class FutoSpec
 
   def process_bullet_chizu_match(bullet, chizu)
     matched = false
-    dpa "chizu: #{chizu.kkey}", :yellow
+    dpa "chizu: #{chizu.kkey}", COLORS[:init]
     if is_todo? chizu
-      #logd "found todo: #{chizu}", :yellow
+      logd "found todo: #{chizu}", COLORS[:init]
       # todos aren't considered completed so they are unmatched
     elsif is_included_in? chizu
-      #logd "found included_in: #{chizu}", :yellow
+      #logd "found included_in: #{chizu}", COLORS[:init]
       @included_ins << chizu
     else
       if bullet.label == chizu.kkey
-        logd "matched: #{bullet.label} #{chizu.kkey}", :cyan
+        logd "matched: #{bullet.label} #{chizu.kkey}", COLORS[:init]
         matched = true
       end
     end
@@ -463,12 +464,12 @@ class FutoSpec
 
   def output_unmatched_commands
     puts
-    pa "Missing chizu entries:", :yellow, :bright
+    pa "Missing chizu entries:", COLORS[:warning], :bright
     puts
     @unmatched.each do |label|
-      pa "On '#{label}' do", :yellow
-      pa '  # TODO', :yellow
-      pa 'end', :yellow
+      pa "On '#{label}' do", COLORS[:warning]
+      pa '  # TODO', COLORS[:warning]
+      pa 'end', COLORS[:warning]
       puts
     end
   end
@@ -480,11 +481,11 @@ class FutoSpec
 
   def run_commands_in_block_context(bullet)
     bullet.associated_commands.each do |cmd|
-      pa cmd, :cyan if cmd != 'breakpoint'
+      pa cmd, COLORS[:support] if cmd != 'breakpoint'
       begin
         binding = eval(cmd, binding)
       rescue RSpec::Expectations::ExpectationNotMetError => e
-        pa e, :red, :bright
+        pa e, COLORS[:error], :bright
       end
     end
   end
@@ -492,8 +493,9 @@ class FutoSpec
   def exec_cases
     puts
     @cases.each do |test_case|
-      pa "case: #{test_case.description}", :cyan, :bright
+      pa "case: #{test_case.description}", COLORS[:exec], :bright
       test_case.bullet_points.each do |bullet|
+        pa bullet, COLORS[:exec]
         run_commands_in_block_context(bullet)
       end
     end
