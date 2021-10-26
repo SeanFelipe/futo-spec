@@ -1,7 +1,7 @@
 Gem::Specification.new do |s|
   s.name        = 'futo-spec'
-  s.version     = '0.4.3'
-  s.date        = '2020-09-21'
+  s.version     = '0.4.3.1a'
+  s.date        = '2020-10-25'
   s.summary     = "Test engine using bullet points. Like you're writing on an envelope."
   s.description = "Write your test notes in bullet point format, then map to test engine actions. Like Cucumber, but * - >  instead of Gherkin."
   s.authors     = ["Sean Felipe Wolfe"]
@@ -21,4 +21,5 @@ Gem::Specification.new do |s|
   s.add_runtime_dependency 'rspec', '~> 3.9'
   s.add_runtime_dependency 'rspec-expectations', '~> 3.9'
   s.add_development_dependency 'byebug', '~> 11.1'
+  s.add_development_dependency 'whirly', '~> 3.0'
 end

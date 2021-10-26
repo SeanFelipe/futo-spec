@@ -1,5 +1,0 @@
-basic mapping
-** mock data: '_glue/mocks/basics.txt'
-- lines with bullets should map as a normal test case
-- lines without bullets should map as a test description
-- newlines \n should start a new case
