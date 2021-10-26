@@ -30,7 +30,7 @@ ARGV.each do |arg|
   elsif arg == '-v' || arg == '--version'
     exec_cases = false
     puts Gem.loaded_specs['futo-spec'].version
-  elsif arg == '--debug'
+  elsif arg == '-D' || arg == '--debug'
     $debug = true
   elsif arg == '-d' || arg == '--dry-run'
     opts << :dry_run

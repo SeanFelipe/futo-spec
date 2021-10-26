@@ -1,3 +1,6 @@
+efficiency w larger chizus
+- use sets to match chizus instead of looping over the chizu array
+
 variable scoping
 - local variable scoping / local to a block in a chizu step
 - @ and $ already work

@@ -16,7 +16,8 @@ COLORS = {
   log:      :yellow,
   exec:     :yellow,
   support:  :cyan,
-  warning:  :yellow,
+  warning:  'coral',
+  missing:  :yellow,
   error:    :red,
 }
 
@@ -85,10 +86,14 @@ class FutoSpec
   attr_accessor :cases, :chizu, :unmatched, :included_ins
 
   def initialize(opts={})
+    Whirly.configure spinner: "dots"
+    Whirly.configure append_newline: false
+    Whirly.configure color: false
+
     @cases = Array.new
     @chizu_files = Array.new
-    @chizu_array = Array.new
-    @unmatched = Array.new
+    @chizus = Array.new
+    @unmatched = Set.new
     @included_ins = Array.new
 
     if $debug
@@ -105,32 +110,31 @@ class FutoSpec
       dpa "specified file: #{$specified_file}"
     end
 
-    if opts.include? :markdown
-      $markdown = true
-      pa 'markdown mode', COLORS[:init], :bright
-    end
-
     if opts.include? :headless
       $headless = true
-      dpa 'markdown mode'
+      dpa 'headless mode'
     end
 
-    if $markdown
-      unless $specified_file
-        raise ArgumentError, "please specify a file when using --markdown option."
-      else
-        test_case_lines = process_specified_file
-        generate_markdown_and_print(test_case_lines)
-        pa 'finished markdown.', COLORS[:init]
-      end
+    if opts.include? :markdown
+      markdown_only
     else
       look_for_envrb_and_parse
-
       test_case_lines = process_specified_file
       create_test_cases(test_case_lines)
-      dpa "test cases loaded: #{@cases.length}"
+      find_matching_chizu_files
+      process_chizu_files
+      match_cases_to_chizus
+    end
+  end
 
-      load_matching_chizu_plus_shared_directory
+  def markdown_only
+    pa 'markdown mode', COLORS[:init], :bright
+    unless $specified_file
+      raise ArgumentError, "please specify a file when using --markdown option."
+    else
+      test_case_lines = process_specified_file
+      generate_markdown_and_print(test_case_lines)
+      pa 'finished markdown.', COLORS[:init]
     end
   end
 
@@ -166,6 +170,8 @@ class FutoSpec
     path = "futo/#{$specified_file}"
     File.open(path) do |file|
       file_lines = file.readlines(chomp:true)
+      # add one blank line to facilitate saving the last test case
+      file_lines << ''
       return file_lines
     end
   end
@@ -210,7 +216,11 @@ class FutoSpec
   end
 
   def add_case_to_spec
-    @cases << FutoCase.new(@new_case_label, @new_case_bullets)
+    # don't add the last test case
+    unless @new_case_label == ''
+      dpa "adding new test case: #{@new_case_label}"
+      @cases << FutoCase.new(@new_case_label, @new_case_bullets)
+    end
   end
 
   def begin_new_case
@@ -279,7 +289,7 @@ class FutoSpec
       l0 = line.gsub('(DONE)','').gsub('(done)','')
       ll = l0.lstrip.rstrip
       if is_newline? ll
-        dpa "found newline: #{ll}", COLORS[:setup]
+        dpa "found newline: #{ll}, saving existing case and starting a new one"
         add_case_to_spec
         begin_new_case
       else
@@ -297,11 +307,11 @@ class FutoSpec
           dpa "found new description: #{ll}", COLORS[:setup]
           new_label(ll)
         else
-          raise RuntimeError, "could not find entry type for string #{ll}"
+          raise RuntimeError, "could not find matching chizu entry type for: #{ll}"
         end
       end
+      dpa "test cases loaded: #{@cases.length}"
     end
-
     # catch anything left over
     add_case_to_spec
   end
@@ -320,16 +330,15 @@ class FutoSpec
     return single
   end
 
-  def load_matching_chizu_plus_shared_directory
+  def find_matching_chizu_files
     without_suffix = $specified_file.chomp('.futo')
     base = "#{Dir.pwd}/futo/chizus"
     path = "#{base}/#{without_suffix}.chizu"
-    chizu_files = []
     unless File.exist? path
-      raise RuntimeError, " #{$specified_file}: couldn't find matching .chizu file"
+      pa "#{$specified_file}: couldn't find matching .chizu file", COLORS[:warning]
     else
       dpa "loading matching #{$specified_file}.chizu ...", COLORS[:setup]
-      chizu_files << path
+      @chizu_files << path
     end
 
     search_dir = "#{base}/shared"
@@ -337,19 +346,21 @@ class FutoSpec
     Find.find(search_dir) do |ff|
       if ff.end_with? 'chizu'
         dpa "loading #{ff}"
-        chizu_files << ff
+        @chizu_files << ff
       end
     end
-
-    chizu_files.each {|ff| load_chizu_commands ff}
   end
 
+  def process_chizu_files
+    @chizu_files.each {|ff| load_chizu_commands ff}
+  end
 
   def add_new_chizu(kkey, commands)
-    @chizu_array << ChizuEntry.new(kkey, commands)
+    @chizus << ChizuEntry.new(kkey, commands)
   end
 
   def load_chizu_commands(ff)
+    dpa "loading chizu commands from file: #{ff}"
     File.open(ff) do |file|
       lines = file.readlines(chomp:true)
       kkey = ''
@@ -418,15 +429,15 @@ class FutoSpec
     end
   end
 
-  def match_chizus_to_test_cases
-    if @chizu_array.length == 0
+  def match_cases_to_chizus
+    if @chizus.length == 0
       set_all_unmatched
     else
       @cases.each_with_index do |test_case, tc_index|
         test_case.bullet_points.each do |bullet|
           dpa "matching bullet: #{bullet}", :bb
           matched = false
-          @chizu_array.each do |chizu|
+          @chizus.each do |chizu|
             if process_bullet_chizu_match(bullet, chizu)
               bullet.associated_commands = chizu.associated_commands
               matched = true
@@ -456,23 +467,10 @@ class FutoSpec
       @included_ins << chizu
     else
       if bullet.label == chizu.kkey
-        logd "matched: #{bullet.label} #{chizu.kkey}", COLORS[:init]
         matched = true
       end
     end
     return matched
-  end
-
-  def output_unmatched_commands
-    puts
-    pa "Missing chizu entries:", COLORS[:warning], :bright
-    puts
-    @unmatched.each do |label|
-      pa "On '#{label}' do", COLORS[:warning]
-      pa '  # TODO', COLORS[:warning]
-      pa 'end', COLORS[:warning]
-      puts
-    end
   end
 
   def run
@@ -482,7 +480,7 @@ class FutoSpec
 
   def run_commands_in_block_context(bullet)
     bullet.associated_commands.each do |cmd|
-      pa cmd, COLORS[:support] if cmd != 'breakpoint'
+      pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint'
       begin
         Whirly.start do
           binding = eval(cmd, binding)
@@ -496,12 +494,27 @@ class FutoSpec
   def exec_cases
     puts; puts
     @cases.each do |test_case|
+      title = "case: #{test_case.description}"
+      pa '-' * title.length, COLORS[:exec]
       pa "case: #{test_case.description}", COLORS[:exec], :bright
+      puts
       test_case.bullet_points.each do |bullet|
         pa bullet, COLORS[:exec]
         run_commands_in_block_context(bullet)
       end
     end
     puts; puts; puts
+  end
+
+  def output_unmatched_commands
+    puts
+    pa "Missing chizu entries:", COLORS[:missing], :bright
+    puts
+    @unmatched.each do |label|
+      pa "On '#{label}' do", COLORS[:missing]
+      pa '  # TODO', COLORS[:missing]
+      pa 'end', COLORS[:missing]
+      puts
+    end
   end
 end
