@@ -480,9 +480,9 @@ class FutoSpec
 
   def run_commands_in_block_context(bullet)
     bullet.associated_commands.each do |cmd|
-      pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint'
       begin
         Whirly.start do
+          pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint'
           binding = eval(cmd, binding)
         end
       rescue RSpec::Expectations::ExpectationNotMetError => e
