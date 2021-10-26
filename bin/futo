@@ -1,40 +1,58 @@
 #!/usr/bin/env ruby_executeable_hooks
 require 'fileutils'
 require 'futo-spec'
+require 'paint/pa'
 
-output_version_only = false
-opts = {}
+opts = Set.new
 
 def futo_init_directories
-  FileUtils.mkdir_p("#{Dir.pwd}/futo/chizus")
-  FileUtils.mkdir("#{Dir.pwd}/futo/_glue")
+  dirs = ['chizus/shared','_glue']
+  dirs.each do |dd|
+    FileUtils.mkdir_p("#{Dir.pwd}/futo/#{dd}")
+  end
+  File.new("#{Dir.pwd}/futo/_glue/env.rb", "w")
 end
 
-ARGV.each do |arg|
-  if arg == '-d' || arg == '--dry-run'
-    opts.store(:dry, true)
-  elsif arg == '-md' || arg == '--markdown'
-    opts.store(:markdown, true)
-  elsif arg == '-v' || arg == '--version'
-    output_version_only = true
-    puts Gem.loaded_specs['futo-spec'].version
-  elsif arg == '--init'
-    futo_init_directories
-  elsif arg == '-h' || arg == '--headless'
-    opts.store(:headless, true)
-  elsif arg == '-v' || arg == '--version'
-    output_version_only = true
-  elsif arg.end_with? '.futo'
-    opts.store(:specified_file, arg)
-  elsif arg.include? ':'
-    opts.store(:specified_line, arg)
-  elsif not arg.start_with? '-'
-    # support passing a file name without having to type .futo
-    opts.store(:specified_file, "#{arg}.futo")
+def check_debug_envvar
+  if ENV.has_key?('DEBUG') && ENV['DEBUG'] == 'true'
+    $debug = true
   end
 end
 
-unless output_version_only
+exec_cases = true
+
+ARGV.each do |arg|
+  if arg == '--init'
+    exec_cases = false
+    pa 'setting futo directories ...', :yellow, :bright
+    futo_init_directories
+    pa 'init complete.', :yellow
+  elsif arg == '-v' || arg == '--version'
+    exec_cases = false
+    puts Gem.loaded_specs['futo-spec'].version
+  elsif arg == '--debug'
+    $debug = true
+  elsif arg == '-d' || arg == '--dry-run'
+    opts << :dry_run
+  elsif arg == '-md' || arg == '--markdown'
+    opts << :markdown
+  elsif arg == '-h' || arg == '--headless'
+    opts << :headless
+  elsif arg.end_with? '.futo'
+    opts << :specified_file
+    $specified_file = arg
+  elsif arg.include? ':'
+    opts << :specified_line
+  elsif not arg.start_with? '-'
+    # support passing a file name without having to type .futo
+    opts << :specified_file
+    $specified_file = "#{arg}.futo"
+  end
+end
+
+if exec_cases
+  puts
+  check_debug_envvar
   fs = FutoSpec.new(opts)
   fs.run
 end

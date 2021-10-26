@@ -3,6 +3,7 @@ require 'find'
 require 'paint/pa'
 require 'rspec/expectations'
 require 'rspec'
+require 'whirly'
 require_relative './markdown_generator'
 
 
@@ -11,6 +12,7 @@ BULLET_POINTS_REGEX = /[\->]*/
 COLORS = {
   init:     :gray,
   setup:    :gray,
+  debug:    :gray,
   log:      :yellow,
   exec:     :yellow,
   support:  :cyan,
@@ -26,11 +28,11 @@ end
 
 def logd(msg, *colors)
   if $debug
-    unless colors
-      puts msg
+    unless colors.length > 0
+      pa msg, COLORS[:debug]
     else
       if colors.first == :bb
-        pa msg, :yellow, :bright
+        pa msg, COLORS[:debug], :bright
       else
         pa msg, *colors
       end
@@ -82,14 +84,6 @@ class FutoSpec
   include RSpec::Matchers
   attr_accessor :cases, :chizu, :unmatched, :included_ins
 
-  def check_and_set_debug
-    if ENV.has_key? 'DEBUG'
-      if ENV.fetch('DEBUG') == 'true'
-        $debug = true
-      end
-    end
-  end
-
   def initialize(opts={})
     @cases = Array.new
     @chizu_files = Array.new
@@ -97,38 +91,44 @@ class FutoSpec
     @unmatched = Array.new
     @included_ins = Array.new
 
-    check_and_set_debug
+    if $debug
+      dpa '-- debug mode --'
+      puts
+    end
 
-    if opts.include? :dry
-      $dry_run = true if opts[:dry]
+    if opts.include? :dry_run
+      $dry_run = true
       pa 'dry run', COLORS[:init], :bright
     end
 
+    if opts.include? :specified_file
+      dpa "specified file: #{$specified_file}"
+    end
+
     if opts.include? :markdown
-      $markdown = true if opts[:markdown]
+      $markdown = true
       pa 'markdown mode', COLORS[:init], :bright
     end
 
     if opts.include? :headless
-      $headless = true if opts[:headless]
+      $headless = true
+      dpa 'markdown mode'
     end
 
-    @specified_file = opts.fetch(:specified_file)
-
     if $markdown
-      unless @specified_file
+      unless $specified_file
         raise ArgumentError, "please specify a file when using --markdown option."
       else
-        test_case_lines = process_specific_file(@specified_file)
+        test_case_lines = process_specified_file
         generate_markdown_and_print(test_case_lines)
         pa 'finished markdown.', COLORS[:init]
       end
     else
       look_for_envrb_and_parse
 
-      test_case_lines = process_specific_file(@specified_file)
+      test_case_lines = process_specified_file
       create_test_cases(test_case_lines)
-      dpa "test cases loaded: #{@cases.length}", :bb
+      dpa "test cases loaded: #{@cases.length}"
 
       load_matching_chizu_plus_shared_directory
     end
@@ -161,9 +161,9 @@ class FutoSpec
     return test_case_lines
   end
 
-  def process_specific_file(fn)
-    dpa "process_specific_file: #{fn}", COLORS[:init], :bright
-    path = "futo/#{fn}"
+  def process_specified_file
+    dpa "process_specified_file: #{$specified_file}"
+    path = "futo/#{$specified_file}"
     File.open(path) do |file|
       file_lines = file.readlines(chomp:true)
       return file_lines
@@ -320,24 +320,25 @@ class FutoSpec
     return single
   end
 
-  def find_chizu_with_matching_fn
-  end
-
   def load_matching_chizu_plus_shared_directory
+    without_suffix = $specified_file.chomp('.futo')
     base = "#{Dir.pwd}/futo/chizus"
-    path = "#{base}/#{@specified_file}.chizu"
+    path = "#{base}/#{without_suffix}.chizu"
     chizu_files = []
     unless File.exist? path
-      raise RuntimeError, "couldn't find matching chizu for #{@specified_file}"
+      raise RuntimeError, " #{$specified_file}: couldn't find matching .chizu file"
     else
-      dpa "loading matching #{@specified_file}.chizu ...", COLORS[:setup], :bright
+      dpa "loading matching #{$specified_file}.chizu ...", COLORS[:setup]
       chizu_files << path
     end
+
     search_dir = "#{base}/shared"
-    dpa "loading shared chizus ...", COLORS[:setup], :bright
+    dpa "loading shared chizus ...", COLORS[:setup]
     Find.find(search_dir) do |ff|
-      dpa "loading #{ff}", :cyan
-      chizu_files << ff if ff.end_with? '.chizu'
+      if ff.end_with? 'chizu'
+        dpa "loading #{ff}"
+        chizu_files << ff
+      end
     end
 
     chizu_files.each {|ff| load_chizu_commands ff}
@@ -483,7 +484,9 @@ class FutoSpec
     bullet.associated_commands.each do |cmd|
       pa cmd, COLORS[:support] if cmd != 'breakpoint'
       begin
-        binding = eval(cmd, binding)
+        Whirly.start do
+          binding = eval(cmd, binding)
+        end
       rescue RSpec::Expectations::ExpectationNotMetError => e
         pa e, COLORS[:error], :bright
       end
@@ -491,7 +494,7 @@ class FutoSpec
   end
 
   def exec_cases
-    puts
+    puts; puts
     @cases.each do |test_case|
       pa "case: #{test_case.description}", COLORS[:exec], :bright
       test_case.bullet_points.each do |bullet|
@@ -499,5 +502,6 @@ class FutoSpec
         run_commands_in_block_context(bullet)
       end
     end
+    puts; puts; puts
   end
 end

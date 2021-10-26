@@ -1,0 +1,3 @@
+* futo --init should create directories if futo/ doesn't exist
+
+* futo --init should gracefully skip any subdirectories that already exist
