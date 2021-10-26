@@ -15,7 +15,8 @@ COLORS = {
   debug:    :gray,
   log:      :yellow,
   exec:     :yellow,
-  support:  :cyan,
+  support:  'cornflower blue',
+  out:      'dark khaki',
   warning:  'coral',
   missing:  :yellow,
   error:    :red,
@@ -41,6 +42,10 @@ def logd(msg, *colors)
   end
 end
 alias :dpa :logd
+
+def pout(msg)
+  pa msg, COLORS[:out]
+end
 
 class FutoBullet
   attr_accessor :label, :associated_commands
@@ -495,11 +500,11 @@ class FutoSpec
     puts; puts
     @cases.each do |test_case|
       title = "case: #{test_case.description}"
-      pa '-' * title.length, COLORS[:exec]
-      pa "case: #{test_case.description}", COLORS[:exec], :bright
+      pa "\u22EF" * ( title.length + 5 ), COLORS[:exec]
+      pa "  case: #{test_case.description}", COLORS[:exec], :bright
       puts
       test_case.bullet_points.each do |bullet|
-        pa bullet, COLORS[:exec]
+        pa "\u229A #{bullet}", COLORS[:exec]
         run_commands_in_block_context(bullet)
       end
     end
