@@ -1,0 +1,9 @@
+local variables
+- declare a local variable within a block
+- reference variable later on in the same block
+--> value correct / no unidentified value errors
+
+local vars should not persist between blocks
+- declare a local variable within a block
+- reference the variable in a subsequent block
+--> unidentified local variable error
