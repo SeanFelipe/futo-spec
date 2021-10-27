@@ -492,7 +492,7 @@ class FutoSpec
           binding = eval(cmd, binding)
         end
 =end
-        binding = Whirly.start { eval(cmd, binding) }
+        binding = eval(cmd, binding)
       rescue RSpec::Expectations::ExpectationNotMetError => e
         pa e, COLORS[:error], :bright
       end
