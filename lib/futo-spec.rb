@@ -484,17 +484,23 @@ class FutoSpec
   end
 
   def run_commands_in_block_context(bullet)
+    local_vars = {}
     bullet.associated_commands.each do |cmd|
       begin
-=begin
-        Whirly.start do
-          pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint'
-          binding = eval(cmd, binding)
+        pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint' # agb ignore
+        bind = binding
+        local_vars.each_pair do |kk, vv|
+          bind.local_variable_set(kk, vv)
         end
-=end
-        binding = eval(cmd, binding)
+        result = bind.eval(cmd)
+        puts "result: #{result}"
+        if cmd.include? '='
+          new_var = cmd.split('=').first.rstrip
+          local_vars.store(new_var, result)
+        end
       rescue RSpec::Expectations::ExpectationNotMetError => e
         pa e, COLORS[:error], :bright
+        raise e
       end
     end
   end
