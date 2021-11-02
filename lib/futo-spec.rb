@@ -5,6 +5,7 @@ require 'rspec/expectations'
 require 'rspec'
 require 'whirly'
 require_relative './markdown_generator'
+require_relative './context_breakpoint'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -483,6 +484,14 @@ class FutoSpec
     output_unmatched_commands if @unmatched.length > 0
   end
 
+  def breakpoint_with_local_vars(local_vars)
+    bind = binding
+    bind.local_variable_set(:ish, '555')
+    eval('breakpoint; puts "ishly: #{ish}"', bind).binding
+    puts
+  end
+
+
   def run_commands_in_block_context(bullet)
     local_vars = {}
     bullet.associated_commands.each do |cmd|
@@ -492,7 +501,12 @@ class FutoSpec
         local_vars.each_pair do |kk, vv|
           bind.local_variable_set(kk, vv)
         end
-        result = bind.eval(cmd)
+        unless cmd == 'breakpoint'
+          result = bind.eval(cmd)
+        else
+          c = BreakpointContext.new(bind)
+          c.contextual_breakpoint
+        end
         puts "result: #{result}"
         if cmd.include? '='
           new_var = cmd.split('=').first.rstrip
