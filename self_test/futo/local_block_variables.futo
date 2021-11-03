@@ -1,9 +1,18 @@
 local variables
-- declare a local variable within a block
-- reference variable later on in the same block
+- declare a local variable + reference in the same block
 --> value correct / no unidentified value errors
 
 local vars should not persist between blocks
 - declare a local variable within a block
 - reference the variable in a subsequent block
 --> unidentified local variable error
+
+@ vars should still work
+- declare a @ var
+- reference @ var in another block
+--> ok no errors
+
+global vars should still work
+- declare a global var
+- reference global var in subsequent block
+--> ok no errors

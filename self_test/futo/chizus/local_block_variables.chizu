@@ -1,0 +1,46 @@
+On 'declare a local variable + reference in the same block' do
+  localvar = :foo
+  puts "locally scoped variable: #{localvar}"
+end
+
+On 'value correct / no unidentified value errors' do
+  localvar2 = 5
+  localvar2.times {|l| puts "localvar2: #{l}"}
+end
+
+On 'declare a local variable within a block' do
+  localvar3 = :baz
+  puts "created localvar3: #{localvar3}"
+end
+
+On 'reference the variable in a subsequent block' do
+  begin
+    puts "in a subsequent block, should not be able to find localvar3: #{localvar3}"
+  rescue NameError
+    puts 'rescued expected NameError --> looks good.'
+  end
+end
+
+On 'unidentified local variable error' do
+  # should have an error from the previous step
+end
+
+On 'declare a @ var' do
+  @classvar = :griff
+end
+
+On 'reference @ var in another block' do
+  puts "referencing previous @classvar: #{@classvar}"
+end
+
+On 'ok no errors' do
+  # should not have an error from previous
+end
+
+On 'declare a global var' do
+  $varglobal = :earth
+end
+
+On 'reference global var in subsequent block' do
+  puts "global var: #{$varglobal}"
+end

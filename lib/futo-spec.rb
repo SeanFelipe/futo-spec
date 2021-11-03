@@ -1,5 +1,6 @@
-require 'byebug'; alias :breakpoint :byebug
+require 'set'
 require 'find'
+require 'byebug'; alias :breakpoint :byebug
 require 'paint/pa'
 require 'rspec/expectations'
 require 'rspec'
@@ -507,7 +508,7 @@ class FutoSpec
           c = BreakpointContext.new(bind)
           c.contextual_breakpoint
         end
-        puts "result: #{result}"
+        dpa "result: #{result}"
         if cmd.include? '='
           new_var = cmd.split('=').first.rstrip
           local_vars.store(new_var, result)
