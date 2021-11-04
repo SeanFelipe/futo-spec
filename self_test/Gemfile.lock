@@ -1,7 +1,7 @@
 PATH
   remote: ..
   specs:
-    futo-spec (0.4.99)
+    futo-spec (0.4.99.1)
       byebug (~> 11.1)
       paint (~> 2.2)
       rspec (~> 3.9)

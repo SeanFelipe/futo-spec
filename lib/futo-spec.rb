@@ -511,7 +511,10 @@ class FutoSpec
         dpa "result: #{result}"
         if cmd.include? '='
           new_var = cmd.split('=').first.rstrip
-          local_vars.store(new_var, result)
+          unless new_var.include? '@' or new_var.include? '$'
+            # don't store @ vars as a local var
+            local_vars.store(new_var, result)
+          end
         end
       rescue RSpec::Expectations::ExpectationNotMetError => e
         pa e, COLORS[:error], :bright

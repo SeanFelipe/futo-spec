@@ -16,3 +16,8 @@ global vars should still work
 - declare a global var
 - reference global var in subsequent block
 --> ok no errors
+
+breakpoints
+- local vars should work in breakpoints
+- object @ vars should not throw errors in breakpoints
+- global $ vars should work in breakpoints

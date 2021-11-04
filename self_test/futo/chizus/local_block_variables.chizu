@@ -44,3 +44,22 @@ end
 On 'reference global var in subsequent block' do
   puts "global var: #{$varglobal}"
 end
+
+On 'local vars should work in breakpoints' do
+  bvar = :omigod
+  breakpoint
+  bvar.should eq :omigod
+end
+
+On 'object @ vars should not throw errors in breakpoints' do
+  # TODO: is it possible to get @ instance vars available in breakpoints ?
+  @ovar = :amos
+  breakpoint
+  puts "@ovar: #{@ovar}"
+end
+
+On 'global $ vars should work in breakpoints' do
+  $gvar = :earthy
+  breakpoint
+  $gvar.should eq :earthy
+end
