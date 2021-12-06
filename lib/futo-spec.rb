@@ -4,9 +4,14 @@ require 'byebug'; alias :breakpoint :byebug
 require 'paint/pa'
 require 'rspec/expectations'
 require 'rspec'
-require 'whirly'
-require_relative './markdown_generator'
-require_relative './context_breakpoint'
+require_relative 'bullet_point'
+require_relative 'chizu_entry'
+require_relative 'context_breakpoint'
+require_relative 'futo-spec'
+require_relative 'mock_tools'
+require_relative 'runner'
+require_relative 'test_case'
+require_relative 'utils'
 
 
 BULLET_POINTS_REGEX = /[\->]*/
@@ -30,73 +35,33 @@ RSpec.configure do |config|
   end
 end
 
-def logd(msg, *colors)
-  if $debug
-    unless colors.length > 0
-      pa msg, COLORS[:debug]
-    else
-      if colors.first == :bb
-        pa msg, COLORS[:debug], :bright
-      else
-        pa msg, *colors
-      end
-    end
+class UnmatchedChizuData
+  attr_reader :summary, :bullet_points
+  def initialize(sum)
+    @summary = sum
+    @bullet_points = []
   end
-end
-alias :dpa :logd
-
-def pout(msg)
-  pa msg, COLORS[:out]
-end
-
-class FutoBullet
-  attr_accessor :label, :associated_commands
-  def initialize(h)
-    @label = h
-    @associated_commands = Array.new
+  def add_bullet_point(bp)
+    @bullet_points << bp
   end
-  def to_s; return @label; end
-end
-
-class FutoCase
-  ##
-  # A test case, with a description and associated bullet points.
-  # The description won't actually execute code.
-  # The associated bullet points will be mapped to ruby commands via "Chizus".
-  # Bullets will in sequence until a newline is encountered.
-  attr_accessor :description, :bullet_points
-  def initialize(h, b_arr)
-    @description = h
-    @bullet_points = b_arr
-  end
-  def to_s; return @description; end
-end
-
-class ChizuEntry
-  ##
-  # "Chizu" is Japanese for "map".
-  # Chizus map bullet point text to specific ruby commands which will be executed.
-  # Analagous to Cucumber's "step definition" layer.
-  attr_accessor :kkey, :associated_commands
-  def initialize(h, c_arr)
-    @kkey = h
-    @associated_commands = c_arr
-  end
-  def to_s; return @kkey; end
 end
 
 class FutoSpec
   ##
-  # A collection of test cases, "FutoCase", and execution mappings, "Chizus".
+  # A collection of test cases, "FutoTestCase", and execution mappings, "Chizus".
   # Collect test definitions, then match them to chizus and run the associated commands.
   include RSpec::Matchers
-  attr_accessor :cases, :chizu, :unmatched, :included_ins
+  attr_reader :cases, :chizu, :unmatched, :included_ins
 
   def initialize(opts={})
+=begin
+    # future enhancement ?
+    # https://github.com/janlelis/whirly
+    # couldn't get it dialed in with variable scoping + good timing
     Whirly.configure spinner: "dots"
     Whirly.configure append_newline: false
     Whirly.configure color: false
-
+=end
     @cases = Array.new
     @chizu_files = Array.new
     @chizus = Array.new
@@ -130,7 +95,11 @@ class FutoSpec
       create_test_cases(test_case_lines)
       find_matching_chizu_files
       process_chizu_files
-      match_cases_to_chizus
+      if @chizus.length == 0
+        set_all_test_cases_unmatched
+      else
+        match_cases_to_chizus_descriptions_only
+      end
     end
   end
 
@@ -154,22 +123,6 @@ class FutoSpec
         end
       end
     end
-  end
-
-  def discover_and_process_spec_files
-    dpa "no file specified, discovering all .futo or .spec files ...", COLORS[:init], :bright
-    futo_files = []
-    test_case_lines = []
-
-    Find.find("#{Dir.pwd}/futo") do |ff|
-      if ff.end_with? '.futo' or ff.end_with? 'spec'
-        fn = ff.split('/').last
-        futo_files << fn
-      end
-    end
-
-    futo_files.each { |fn| test_case_lines += process_specific_file(fn) }
-    return test_case_lines
   end
 
   def process_specified_file
@@ -226,7 +179,7 @@ class FutoSpec
     # don't add the last test case
     unless @new_case_label == ''
       dpa "adding new test case: #{@new_case_label}"
-      @cases << FutoCase.new(@new_case_label, @new_case_bullets)
+      @cases << FutoTestCase.new(@new_case_label, @new_case_bullets)
     end
   end
 
@@ -238,7 +191,7 @@ class FutoSpec
   def new_bullet(line)
     label = line.sub(BULLET_POINTS_REGEX, '').lstrip
     #puts label
-    @new_case_bullets << FutoBullet.new(label)
+    @new_case_bullets << FutoBulletPoint.new(label)
   end
 
   def new_label(line)
@@ -248,8 +201,8 @@ class FutoSpec
   def is_description?(line)
     return false if is_bullet? line
     return false if is_newline? line
-    return false if is_mock_data? line
     return false if is_asterisk? line
+    return false if MockTools.is_mock_data? line
     return true
   end
 
@@ -265,30 +218,6 @@ class FutoSpec
     return line == ''
   end
 
-  def is_mock_data?(line)
-    return line.start_with?('** mock data:')
-  end
-
-  def load_mock_data(ll)
-    # ll is the full line including '** mock data:'
-    fn = ll.split(' ').last.gsub("'",'').gsub('"','')
-    # now we have the filename minus futo/
-    path = "futo/#{fn}"
-    md = File.readlines(path, chomp:true)
-    @mock_data = md
-  end
-
-  def init_test(line)
-    prefix = line.split(':').last.lstrip
-    fn = "./initialize/#{prefix}.initialize.rb"
-    if File.exist?(fn)
-      load(fn)
-    else
-      pa "failed to find setup file #{fn} for line: #{line}", COLORS[:red]
-    end
-    puts
-  end
-
   def create_test_cases(test_case_lines)
     begin_new_case
 
@@ -300,9 +229,9 @@ class FutoSpec
         add_case_to_spec
         begin_new_case
       else
-        if is_mock_data? ll
+        if MockTools.is_mock_data? ll
           dpa "found mock data: #{ll}", COLORS[:setup]
-          load_mock_data(ll)
+          MockTools.load_mock_data(ll)
         elsif is_bullet? ll
           dpa "found bullet: #{ll}", COLORS[:setup]
           new_bullet(ll)
@@ -359,15 +288,15 @@ class FutoSpec
   end
 
   def process_chizu_files
-    @chizu_files.each {|ff| load_chizu_commands ff}
+    @chizu_files.each {|ff| load_ruby_commands_from_chizu_file ff}
   end
 
   def add_new_chizu(kkey, commands)
     @chizus << ChizuEntry.new(kkey, commands)
   end
 
-  def load_chizu_commands(ff)
-    dpa "loading chizu commands from file: #{ff}"
+  def load_ruby_commands_from_chizu_file(ff)
+    dpa "loading ruby commands from file: #{ff}"
     File.open(ff) do |file|
       lines = file.readlines(chomp:true)
       kkey = ''
@@ -430,38 +359,71 @@ class FutoSpec
     return chizu.associated_commands.first.include? 'included_in'
   end
 
-  def set_all_unmatched
+  def gen_unmatched(test_case)
+    unm = UnmatchedChizuData.new(test_case.description)
+    test_case.bullet_points.each {|bullet| unm.add_bullet_point(bullet.label) }
+    return unm
+  end
+
+  def set_all_test_cases_unmatched
     @cases.each do |cc|
-      cc.bullet_points.each {|bullet| @unmatched << bullet.label }
+      unm = gen_unmatched(cc)
+      @unmatched << unm
     end
   end
 
-  def match_cases_to_chizus
-    if @chizus.length == 0
-      set_all_unmatched
-    else
-      @cases.each_with_index do |test_case, tc_index|
-        test_case.bullet_points.each do |bullet|
-          dpa "matching bullet: #{bullet}", :bb
-          matched = false
-          @chizus.each do |chizu|
-            if process_bullet_chizu_match(bullet, chizu)
-              bullet.associated_commands = chizu.associated_commands
-              matched = true
-              break
-            end
-          end
-          dpa "matched? #{bullet.label} : #{matched}", :bb
-          if ! matched
-            unless @unmatched.include? bullet.label
-              dpa "couldn't find a match for #{bullet.label}", COLORS[:error]
-              @unmatched << bullet.label
-            end
+  def match_cases_to_chizus_descriptions_only
+    @cases.each do |test_case|
+      @chizus.each do |chizu|
+        matched = false
+        first_bullet_text = test_case.bullet_points.first.to_s
+        puts "tc bullet : #{first_bullet_text} #{first_bullet_text.class}"
+        puts "chizu.kkey: #{chizu.kkey} #{chizu.kkey.class}"
+        puts "match: #{first_bullet_text == chizu.kkey}"
+        if chizu.kkey == first_bullet_text
+          test_case.associated_commands_test_case_level = chizu.associated_commands
+          matched = true
+          breakpoint
+          puts
+          break
+        end
+        if ! matched
+          unless @unmatched.include? test_case.description
+            dpa "couldn't find a match for #{test_case.description}", COLORS[:error]
+            breakpoint
+            puts
+            @unmatched << gen_unmatched(test_case)
           end
         end
       end
     end
   end
+
+=begin
+  def match_cases_to_chizus
+    @cases.each do |test_case|
+      breakpoint
+      test_case.bullet_points.each do |bullet|
+        dpa "matching bullet: #{bullet}", :bb
+        matched = false
+        @chizus.each do |chizu|
+          if process_bullet_chizu_match(bullet, chizu)
+            bullet.associated_commands = chizu.associated_commands
+            matched = true
+            break
+          end
+        end
+        dpa "matched? #{bullet.label} : #{matched}", :bb
+        if ! matched
+          unless @unmatched.include? bullet.label
+            dpa "couldn't find a match for #{bullet.label}", COLORS[:error]
+            @unmatched << bullet.label
+          end
+        end
+      end
+    end
+  end
+=end
 
   def process_bullet_chizu_match(bullet, chizu)
     matched = false
@@ -478,75 +440,5 @@ class FutoSpec
       end
     end
     return matched
-  end
-
-  def run
-    exec_cases unless $dry_run
-    output_unmatched_commands if @unmatched.length > 0
-  end
-
-  def breakpoint_with_local_vars(local_vars)
-    bind = binding
-    bind.local_variable_set(:ish, '555')
-    eval('breakpoint; puts "ishly: #{ish}"', bind).binding
-    puts
-  end
-
-
-  def run_commands_in_block_context(bullet)
-    local_vars = {}
-    bullet.associated_commands.each do |cmd|
-      begin
-        pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint' # agb ignore
-        bind = binding
-        local_vars.each_pair do |kk, vv|
-          bind.local_variable_set(kk, vv)
-        end
-        unless cmd == 'breakpoint'
-          result = bind.eval(cmd)
-        else
-          c = BreakpointContext.new(bind)
-          c.contextual_breakpoint
-        end
-        dpa "result: #{result}"
-        if cmd.include? '='
-          new_var = cmd.split('=').first.rstrip
-          unless new_var.include? '@' or new_var.include? '$'
-            # don't store @ vars as a local var
-            local_vars.store(new_var, result)
-          end
-        end
-      rescue RSpec::Expectations::ExpectationNotMetError => e
-        pa e, COLORS[:error], :bright
-        raise e
-      end
-    end
-  end
-
-  def exec_cases
-    puts; puts
-    @cases.each do |test_case|
-      title = "case: #{test_case.description}"
-      pa "\u22EF" * ( title.length + 5 ), COLORS[:exec]
-      pa "  case: #{test_case.description}", COLORS[:exec], :bright
-      puts
-      test_case.bullet_points.each do |bullet|
-        pa "\u229A #{bullet}", COLORS[:exec]
-        run_commands_in_block_context(bullet)
-      end
-    end
-    puts; puts; puts
-  end
-
-  def output_unmatched_commands
-    puts
-    pa "Missing chizu entries:", COLORS[:missing], :bright
-    puts
-    @unmatched.each do |label|
-      pa "On '#{label}' do", COLORS[:missing]
-      pa '  # TODO', COLORS[:missing]
-      pa 'end', COLORS[:missing]
-      puts
-    end
   end
 end

@@ -54,5 +54,5 @@ if exec_cases
   puts
   check_debug_envvar
   fs = FutoSpec.new(opts)
-  fs.run
+  Runner.run(fs)
 end

@@ -1,12 +1,11 @@
 PATH
   remote: ..
   specs:
-    futo-spec (0.4.99.1)
+    futo-spec (0.5.0.aa)
       byebug (~> 11.1)
       paint (~> 2.2)
       rspec (~> 3.9)
       rspec-expectations (~> 3.9)
-      whirly (~> 0.3.0)
 
 GEM
   remote: https://rubygems.org/
@@ -27,9 +26,6 @@ GEM
       diff-lcs (>= 1.2.0, < 2.0)
       rspec-support (~> 3.10.0)
     rspec-support (3.10.3)
-    unicode-display_width (2.1.0)
-    whirly (0.3.0)
-      unicode-display_width (>= 1.1)
 
 PLATFORMS
   x86_64-darwin-20
