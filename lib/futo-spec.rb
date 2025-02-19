@@ -99,6 +99,7 @@ class FutoSpec
         set_all_test_cases_unmatched
       else
         match_cases_to_chizus_descriptions_only
+        #fire_cases
       end
     end
   end
@@ -288,7 +289,10 @@ class FutoSpec
   end
 
   def process_chizu_files
-    @chizu_files.each {|ff| load_ruby_commands_from_chizu_file ff}
+    @chizu_files.each do |ff|
+      #puts "processing chizu #{ff}"
+      load_ruby_commands_from_chizu_file ff
+    end
   end
 
   def add_new_chizu(kkey, commands)
@@ -377,14 +381,12 @@ class FutoSpec
       @chizus.each do |chizu|
         matched = false
         first_bullet_text = test_case.bullet_points.first.to_s
-        puts "tc bullet : #{first_bullet_text} #{first_bullet_text.class}"
-        puts "chizu.kkey: #{chizu.kkey} #{chizu.kkey.class}"
-        puts "match: #{first_bullet_text == chizu.kkey}"
+        #puts "tc bullet : #{first_bullet_text} #{first_bullet_text.class}"
+        #puts "chizu.kkey: #{chizu.kkey} #{chizu.kkey.class}"
+        #puts "match: #{first_bullet_text == chizu.kkey}"
         if chizu.kkey == first_bullet_text
           test_case.associated_commands_test_case_level = chizu.associated_commands
           matched = true
-          breakpoint
-          puts
           break
         end
         if ! matched
@@ -441,4 +443,18 @@ class FutoSpec
     end
     return matched
   end
+
+=begin
+  def fire_cases
+    @cases.each do |tcase|
+      #puts tcase.label
+      tcase.associated_commands.each do |cmd|
+        eval cmd
+      end
+      tcase.associated_commands_test_case_level.each do |cmd|
+        eval cmd
+      end
+    end
+  end
+=end
 end

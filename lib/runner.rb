@@ -7,33 +7,30 @@ module Runner
       end
     end
 
-    def run_commands_in_block_context(bullet)
-      local_vars = {}
-      bullet.associated_commands.each do |cmd|
-        begin
-          pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint' # agb ignore
-          bind = binding
-          local_vars.each_pair do |kk, vv|
-            bind.local_variable_set(kk, vv)
-          end
-          unless cmd == 'breakpoint'
-            result = bind.eval(cmd)
-          else
-            c = BreakpointContext.new(bind)
-            c.contextual_breakpoint
-          end
-          dpa "result: #{result}"
-          if cmd.include? '='
-            new_var = cmd.split('=').first.rstrip
-            unless new_var.include? '@' or new_var.include? '$'
-              # don't store @ vars as a local var
-              local_vars.store(new_var, result)
-            end
-          end
-        rescue RSpec::Expectations::ExpectationNotMetError => e
-          pa e, COLORS[:error], :bright
-          raise e
+    def run_command_in_block_context(cmd)
+      begin
+        pa "  #{cmd}", COLORS[:support] if cmd != 'breakpoint' # agb ignore
+        bind = binding
+        @local_vars.each_pair do |kk, vv|
+          bind.local_variable_set(kk, vv)
         end
+        unless cmd == 'breakpoint'
+          result = bind.eval(cmd)
+        else
+          c = BreakpointContext.new(bind)
+          c.contextual_breakpoint
+        end
+        dpa "result: #{result}"
+        if cmd.include? '='
+          new_var = cmd.split('=').first.rstrip
+          unless new_var.include? '@' or new_var.include? '$'
+            # don't store @ vars as a local var
+            @local_vars.store(new_var, result)
+          end
+        end
+      rescue RSpec::Expectations::ExpectationNotMetError => e
+        pa e, COLORS[:error], :bright
+        raise e
       end
     end
 
@@ -43,10 +40,17 @@ module Runner
         title = "case: #{test_case.description}"
         pa "\u22EF" * ( title.length + 5 ), COLORS[:exec]
         pa "  case: #{test_case.description}", COLORS[:exec], :bright
+        #pa "  bullets: #{test_case.bullet_points}", COLORS[:exec], :bright
         puts
+        @local_vars = {}
         test_case.bullet_points.each do |bullet|
           pa "\u229A #{bullet}", COLORS[:exec]
-          run_commands_in_block_context(bullet)
+          bullet.associated_commands.each do |cmd|
+            run_command_in_block_context cmd
+          end
+        end
+        test_case.associated_commands_test_case_level.each do |cmd|
+          run_command_in_block_context(cmd)
         end
       end
       puts; puts; puts
